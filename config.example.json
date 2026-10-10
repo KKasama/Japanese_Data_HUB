@@ -1,0 +1,30 @@
+{
+  "admin_email": "ops@example.org",
+  "user_agent": "jhub/0.1 (+ops@example.org)",
+  "hub_base_url": "https://hub.example.org/oai",
+  "db": "data/hub.sqlite",
+  "store": {
+    "type": "local",
+    "path": "data/store"
+  },
+  "store_s3_example": {
+    "type": "s3",
+    "bucket": "jhub-raw",
+    "endpoint_url": "https://s3.ap-northeast-1.wasabisys.com",
+    "prefix": "raw",
+    "region": "ap-northeast-1",
+    "access_key": "(環境変数等から注入)",
+    "secret_key": "(環境変数等から注入)"
+  },
+  "irdb": {
+    "base_url": "https://irdb.nii.ac.jp/oai/",
+    "metadata_prefix": "jpcoar_2.0",
+    "set": "irdb",
+    "delay": 1.0
+  },
+  "jalc": {
+    "base_url": "https://api.japanlinkcenter.org",
+    "max_rps": 1.0,
+    "site_id": "SI/JST.JSTAGE"
+  }
+}
