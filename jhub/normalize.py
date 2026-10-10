@@ -23,7 +23,8 @@ TYPE_MAP = {
 
 def _year(s):
     m = re.match(r"^(\d{4})", s or "")
-    return int(m.group(1)) if m else None
+    y = int(m.group(1)) if m else None
+    return y if y and 1000 <= y <= 2100 else None   # 9999・0000 は「年不明」のプレースホルダ
 
 
 def _full_date(s):

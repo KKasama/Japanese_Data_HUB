@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日本版研究情報ハブ</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#1d2430; --mute:#667085; --line:#e3e6eb;
+  --accent:#1f6feb; --accent-ink:#ffffff; --bar:#6a9bf0; --ok:#1a7f4b; --warn:#b54708; --bad:#b42318;
+  --code:#f1f3f6; --shadow:0 1px 2px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161c; --panel:#1a2029; --ink:#e6e9ef; --mute:#9aa4b2; --line:#2a3340;
+    --accent:#5b9dff; --accent-ink:#0b1220; --bar:#4d7fd1; --ok:#4cc38a; --warn:#f0a35e; --bad:#f2786d;
+    --code:#222a35; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161c; --panel:#1a2029; --ink:#e6e9ef; --mute:#9aa4b2; --line:#2a3340;
+  --accent:#5b9dff; --accent-ink:#0b1220; --bar:#4d7fd1; --ok:#4cc38a; --warn:#f0a35e; --bad:#f2786d;
+  --code:#222a35; --shadow:none;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif}
+header{background:var(--panel);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header h1{font-size:16px;margin:0;font-weight:700}
+header .sub{color:var(--mute);font-size:12px}
+header .sp{flex:1}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mute);margin-right:6px}
+.dot.ok{background:var(--ok)} .dot.bad{background:var(--bad)}
+nav{display:flex;gap:2px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{border:0;background:none;color:var(--mute);padding:10px 14px;cursor:pointer;font:inherit;border-bottom:2px solid transparent;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+main{max-width:1180px;margin:0 auto;padding:16px}
+section{display:none} section.on{display:block}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.cols{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;box-shadow:var(--shadow)}
+.card h2{font-size:13px;margin:0 0 10px;color:var(--mute);font-weight:600}
+.kpi .n{font-size:26px;font-weight:700;line-height:1.2}
+.kpi .l{color:var(--mute);font-size:12px}
+.bars .row{display:grid;grid-template-columns:minmax(90px,38%) 1fr auto;gap:8px;align-items:center;margin:4px 0;font-size:13px}
+.bars .lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bars .tr{background:var(--code);border-radius:4px;height:10px}
+.bars .fi{background:var(--bar);height:10px;border-radius:4px}
+.bars .v{color:var(--mute);font-variant-numeric:tabular-nums}
+.cols-chart{display:flex;align-items:flex-end;gap:2px;height:110px;margin-top:6px}
+.cols-chart div{flex:1;background:var(--bar);border-radius:2px 2px 0 0;min-height:2px}
+.axis{display:flex;justify-content:space-between;color:var(--mute);font-size:11px;margin-top:4px}
+form.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+label{display:block;font-size:12px;color:var(--mute)}
+input,select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);font:inherit}
+button.btn{padding:8px 14px;border-radius:7px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer;font:inherit}
+button.btn.ghost{background:none;color:var(--accent)}
+button.btn:disabled{opacity:.5;cursor:default}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:600;font-size:12px}
+tbody tr{cursor:pointer} tbody tr:hover{background:var(--code)}
+.tag{display:inline-block;padding:1px 7px;border-radius:999px;background:var(--code);color:var(--mute);font-size:11px;margin-right:4px}
+.mute{color:var(--mute)}
+.pager{display:flex;gap:8px;align-items:center;margin-top:10px}
+pre{background:var(--code);padding:10px;border-radius:8px;overflow:auto;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;max-height:520px;white-space:pre-wrap;word-break:break-all}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:0;width:min(1100px,96vw);max-height:92vh}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.dh{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.dh h3{margin:0;font-size:15px;flex:1}
+.db{padding:14px 16px;overflow:auto;max-height:calc(92vh - 60px)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+dl{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;margin:0 0 12px}
+dt{color:var(--mute)} dd{margin:0;word-break:break-word}
+.note{border-left:3px solid var(--warn);padding:6px 10px;background:var(--code);border-radius:4px;margin:8px 0;font-size:13px}
+a{color:var(--accent)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:12px;word-break:break-all}
+.progress{height:8px;background:var(--code);border-radius:4px;overflow:hidden;margin-top:8px}
+.progress div{height:8px;background:var(--accent);width:0}
+.small{font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>日本版研究情報ハブ <span class="sub">試作 v0.1</span></h1>
+  <span class="sub" id="hdr-last"></span>
+  <span class="sp"></span>
+  <span class="sub"><span class="dot" id="hdr-dot"></span><span id="hdr-health">確認中</span></span>
+</header>
+<nav role="tablist">
+  <button role="tab" data-tab="dash" aria-selected="true">ダッシュボード</button>
+  <button role="tab" data-tab="search" aria-selected="false">検索・閲覧</button>
+  <button role="tab" data-tab="dl" aria-selected="false">ダウンロード</button>
+  <button role="tab" data-tab="status" aria-selected="false">収集状況</button>
+</nav>
+<main>
+
+<section id="dash" class="on">
+  <div class="grid kpis" id="kpis"></div>
+  <div class="grid cols" style="margin-top:12px">
+    <div class="card"><h2>データ源・サイト別（件数）</h2><div class="bars" id="bars-site"></div></div>
+    <div class="card"><h2>種別</h2><div class="bars" id="bars-type"></div></div>
+    <div class="card"><h2>出版年の分布</h2><div id="chart-year"></div></div>
+    <div class="card"><h2>取り込み日ごとの件数（直近30日）</h2><div class="bars" id="bars-day"></div></div>
+  </div>
+</section>
+
+<section id="search">
+  <div class="card">
+    <form class="filters" id="f-search">
+      <div><label>キーワード（タイトル・著者・DOI）<input name="q" placeholder="例: 環境 / 10.11162/…"></label></div>
+      <div><label>サイト<select name="site"><option value="">すべて</option></select></label></div>
+      <div><label>機関（IRDB）<select name="institution"><option value="">すべて</option></select></label></div>
+      <div><label>ジャーナル（ISSN）<input name="journal" placeholder="例: 1884-4375"></label></div>
+      <div><label>DOIプレフィックス<input name="doi_prefix" placeholder="例: 10.11162"></label></div>
+      <div><label>件数<select name="limit"><option>20</option><option>50</option><option>100</option></select></label></div>
+      <div><button class="btn" type="submit">検索</button> <button class="btn ghost" type="button" id="f-reset">クリア</button></div>
+    </form>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="small mute" id="s-summary">検索すると結果が表示されます。</div>
+    <div style="overflow:auto"><table><thead><tr><th>タイトル</th><th>著者</th><th>年</th><th>ジャーナル</th><th>種別</th><th>更新</th></tr></thead><tbody id="s-body"></tbody></table></div>
+    <div class="pager"><button class="btn ghost" id="s-prev" disabled>前へ</button><button class="btn ghost" id="s-next" disabled>次へ</button><span class="small mute" id="s-page"></span></div>
+  </div>
+</section>
+
+<section id="dl">
+  <div class="grid cols">
+    <div class="card">
+      <h2>条件を指定してファイルに保存</h2>
+      <p class="small mute" style="margin-top:0">「検索・閲覧」タブで指定した条件（キーワード・サイト・機関など）が使われます。ブラウザがAPIを順に呼び出して、1つのファイルにまとめます。</p>
+      <div class="small">現在の条件: <span id="dl-cond" class="mute">（なし：すべて）</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <label>形式<select id="dl-fmt"><option value="jsonl">JSONL（1行1件）</option><option value="json">JSON</option><option value="csv">CSV（主な項目）</option></select></label>
+        <label>最大件数<select id="dl-max"><option>100</option><option>1000</option><option selected>5000</option><option>20000</option></select></label>
+      </div>
+      <div style="margin-top:12px"><button class="btn" id="dl-go">ダウンロード</button> <button class="btn ghost" id="dl-cancel" disabled>中止</button></div>
+      <div class="progress"><div id="dl-bar"></div></div>
+      <div class="small mute" id="dl-msg" style="margin-top:6px"></div>
+    </div>
+    <div class="card">
+      <h2>プログラムから取得する（API）</h2>
+      <p class="small mute" style="margin-top:0">同じデータを、他のシステムから取得できます。次のURLは、現在の条件を反映しています。</p>
+      <div class="small">JSON API</div><pre id="api-url"></pre>
+      <div class="small" style="margin-top:8px">curl の例</div><pre id="api-curl"></pre>
+      <div class="small" style="margin-top:8px">OAI-PMH（ハーベスター向け）</div>
+      <ul class="small">
+        <li><a id="oai-id" target="_blank" rel="noopener">Identify</a></li>
+        <li><a id="oai-sets" target="_blank" rel="noopener">ListSets（セット一覧）</a></li>
+        <li><a id="oai-recs" target="_blank" rel="noopener">ListRecords（整形済み、先頭ページ）</a></li>
+      </ul>
+      <div class="note">差分取得は、APIでは <code>from=2026-10-01T00:00:00Z</code>、OAI-PMHでは <code>&amp;from=…</code> で指定できます。</div>
+    </div>
+  </div>
+</section>
+
+<section id="status">
+  <div class="grid cols" id="st-cards"></div>
+  <div class="card" style="margin-top:12px"><h2>セット一覧（OAI-PMHで絞り込める単位）</h2><div class="small mute">機関・サイト・ジャーナル・プレフィックスごとに、別々に取得できます。</div><div id="sets" class="small" style="margin-top:8px"></div></div>
+</section>
+</main>
+
+<dialog id="dlg">
+  <div class="dh"><h3 id="dlg-title">詳細</h3><button class="btn ghost" id="dlg-close">閉じる</button></div>
+  <div class="db" id="dlg-body"></div>
+</dialog>
+
+<script>
+"use strict";
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = n => (n ?? 0).toLocaleString("ja-JP");
+const api = async (p) => { const r = await fetch(p); const j = await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.error || r.status); return j; };
+
+// ---------- タブ ----------
+function showTab(id){
+  $$("nav button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab===id));
+  $$("main section").forEach(s => s.classList.toggle("on", s.id===id));
+  if(id==="dl") renderDlInfo();
+  if(id==="status") loadStatus();
+  try{ history.replaceState(null,"","#"+id); }catch(e){}
+}
+$$("nav button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+// ---------- ダッシュボード ----------
+function bars(el, obj, max){
+  const e = Object.entries(obj); if(!e.length){ el.innerHTML='<span class="mute">データがありません</span>'; return; }
+  const m = max || Math.max(...e.map(x=>x[1]));
+  el.innerHTML = e.map(([k,v]) => `<div class="row"><span class="lab" title="${esc(k)}">${esc(k)}</span><span class="tr"><span class="fi" style="display:block;width:${Math.max(2,v/m*100)}%"></span></span><span class="v">${num(v)}</span></div>`).join("");
+}
+async function loadDash(){
+  const s = await api("/api/stats");
+  const k = [["総件数",s.records],["JaLC",s.by_source.jalc||0],["IRDB",s.by_source.irdb||0],["抄録あり（有無のみ）",s.with_abstract_flag],["オープンアクセス",s.open_access],["ORCIDあり",s.with_orcid],["削除済み",s.deleted]];
+  $("#kpis").innerHTML = k.map(([l,n]) => `<div class="card kpi"><div class="n">${num(n)}</div><div class="l">${l}</div></div>`).join("");
+  bars($("#bars-site"), s.by_site);
+  bars($("#bars-type"), s.by_type);
+  const ys = Object.entries(s.by_year);
+  if(ys.length){
+    const m = Math.max(...ys.map(x=>x[1]));
+    $("#chart-year").innerHTML = '<div class="cols-chart">'+ys.map(([y,v])=>`<div title="${esc(y)}年: ${num(v)}件" style="height:${Math.max(2,v/m*100)}%"></div>`).join("")+'</div><div class="axis"><span>'+esc(ys[0][0])+'</span><span>'+esc(ys[ys.length-1][0])+'</span></div>';
+  } else $("#chart-year").innerHTML='<span class="mute">データがありません</span>';
+  bars($("#bars-day"), s.by_day);
+  $("#hdr-last").textContent = s.last_update ? "最終更新 " + s.last_update : "";
+}
+
+// ---------- 検索・閲覧 ----------
+let stack = [""], page = 0, nextCursor = null, lastTotal = 0;
+function formParams(){
+  const fd = new FormData($("#f-search")), p = new URLSearchParams();
+  for(const [k,v] of fd) if(v && k!=="limit") p.set(k,v.trim());
+  return p;
+}
+function authorsOf(w){ return (w.authorships||[]).slice(0,3).map(a=>a.raw_author_name||(a.author&&a.author.display_name)||"").filter(Boolean).join(", ") + ((w.authorships||[]).length>3?" ほか":""); }
+async function doSearch(cursorIdx){
+  const p = formParams(); p.set("limit", $("#f-search").limit.value);
+  if(stack[cursorIdx]) p.set("cursor", stack[cursorIdx]);
+  $("#s-summary").textContent = "検索中…";
+  try{
+    const r = await api("/api/works?"+p);
+    page = cursorIdx; nextCursor = r.next_cursor; lastTotal = r.total;
+    const lim = +$("#f-search").limit.value;
+    $("#s-summary").textContent = `${num(r.total)}件が見つかりました`;
+    $("#s-body").innerHTML = r.results.map(x => {
+      const w = x.work || {};
+      return `<tr data-id="${esc(x.identifier)}"><td>${esc(w.display_name||w.title||x.identifier)}</td><td>${esc(authorsOf(w))}</td><td>${esc(w.publication_year??"")}</td><td>${esc(w.journal_title||"")}</td><td><span class="tag">${esc(x.source)}</span>${esc(w.type||"")}</td><td class="mute small">${esc((x.updated||"").slice(0,10))}</td></tr>`;
+    }).join("") || '<tr><td colspan="6" class="mute">該当なし</td></tr>';
+    $("#s-prev").disabled = page===0;
+    $("#s-next").disabled = !nextCursor;
+    $("#s-page").textContent = r.total ? `${page*lim+1}–${page*lim+r.results.length}件目` : "";
+    $$("#s-body tr[data-id]").forEach(tr => tr.onclick = () => openDetail(tr.dataset.id));
+  }catch(e){ $("#s-summary").textContent = "エラー: "+e.message; }
+}
+$("#f-search").onsubmit = e => { e.preventDefault(); stack=[""]; doSearch(0); renderDlInfo(); };
+$("#f-reset").onclick = () => { $("#f-search").reset(); stack=[""]; $("#s-body").innerHTML=""; $("#s-summary").textContent="検索すると結果が表示されます。"; renderDlInfo(); };
+$("#s-next").onclick = () => { stack[page+1] = nextCursor; doSearch(page+1); };
+$("#s-prev").onclick = () => doSearch(page-1);
+
+async function loadFilters(){
+  try{
+    const [a,b] = await Promise.all([api("/api/sites"), api("/api/institutions")]);
+    $("#f-search").site.innerHTML += a.sites.map(x=>`<option value="${esc(x.site_id)}">${esc(x.site_id)}（${num(x.records)}）</option>`).join("");
+    $("#f-search").institution.innerHTML += b.institutions.map(x=>`<option value="${esc(x.code)}">${esc(x.name_ja||x.code)}（${num(x.records)}）</option>`).join("");
+  }catch(e){}
+}
+
+// ---------- 詳細 ----------
+function row(k,v){ return v===null||v===undefined||v===""||(Array.isArray(v)&&!v.length) ? "" : `<dt>${esc(k)}</dt><dd>${v}</dd>`; }
+async function openDetail(id){
+  const dlg = $("#dlg"); $("#dlg-title").textContent = id; $("#dlg-body").innerHTML = '<span class="mute">読み込み中…</span>'; if(!dlg.open) dlg.showModal();
+  let rec, raw=null, rawErr=null;
+  try{ rec = await api("/api/works/"+encodeURIComponent(id)); }catch(e){ $("#dlg-body").textContent = "エラー: "+e.message; return; }
+  try{ raw = await api("/api/raw/"+encodeURIComponent(id)); }catch(e){ rawErr = e.message; }
+  const w = rec.work || {};
+  const au = (w.authorships||[]).map(a=>{ const o=(a.author&&a.author.orcid)||a.orcid; return esc(a.raw_author_name||"")+(o?` <span class="tag">ORCID</span>`:""); }).join("、");
+  const nice = '<dl>'+
+    row("タイトル", esc(w.title)) + row("英題", esc((w.titles||[]).filter(t=>t.lang==="en").map(t=>t.text).join(" / "))) +
+    row("著者", au) + row("DOI", w.doi?`<a href="${esc(w.doi)}" target="_blank" rel="noopener">${esc(w.doi)}</a>`:"") +
+    row("種別", esc(w.type)+(w.type_raw?` <span class="mute">(${esc(w.type_raw)})</span>`:"")) + row("出版年月日", esc(w.publication_date)) +
+    row("言語", esc(w.language)) + row("ジャーナル", esc(w.journal_title)+(w.journal_title_en?` / ${esc(w.journal_title_en)}`:"")) +
+    row("ISSN", esc((w.issn||[]).join(", "))) + row("巻号頁", esc(w.biblio?[w.biblio.volume&&"vol."+w.biblio.volume,w.biblio.issue&&"no."+w.biblio.issue,w.biblio.first_page&&(w.biblio.first_page+"–"+(w.biblio.last_page||""))].filter(Boolean).join(" "):"")) +
+    row("出版者", esc(w.publisher)) + row("キーワード", esc((w.keywords||[]).map(k=>k.keyword).join("、"))) +
+    row("OA", w.open_access&&w.open_access.is_oa!=null?esc(String(w.open_access.is_oa)):"") + row("助成", esc((w.grants||[]).map(g=>g.funder_display_name||g.award_id||JSON.stringify(g)).join("、"))) +
+    row("参考文献", w.references_count!=null?esc(w.references_count)+"件（DOI "+(w.referenced_dois||[]).length+"件）":"") +
+    row("抄録", w.has_abstract_in_source?"あり（本文は出力しません）":"なし") +
+    row("サイト", esc(rec.site_id)) + row("機関コード", esc(rec.institution_code)) + row("ハブ更新日時", esc(rec.updated)) + '</dl>';
+  const rawTxt = raw ? (raw.format==="xml" ? raw.raw : JSON.stringify(raw.raw,null,1)) : null;
+  $("#dlg-body").innerHTML = nice +
+    '<div class="two"><div><div class="small mute" style="margin-bottom:4px">整形後（OpenAlex互換のJSON）</div><pre>'+esc(JSON.stringify(w,null,1))+'</pre></div>'+
+    '<div><div class="small mute" style="margin-bottom:4px">原データ（保存した生データ）</div>'+(rawTxt?'<pre>'+esc(rawTxt)+'</pre>':'<div class="note">原データを表示できません: '+esc(rawErr)+'</div>')+'</div></div>'+
+    '<div class="small mute" style="margin-top:8px">APIで取得: <code>/api/works/'+esc(encodeURIComponent(id))+'</code></div>';
+}
+$("#dlg-close").onclick = () => $("#dlg").close();
+$("#dlg").addEventListener("click", e => { if(e.target===$("#dlg")) $("#dlg").close(); });
+
+// ---------- ダウンロード ----------
+function condText(){ const p=formParams(); return p.toString()?decodeURIComponent(p.toString().replace(/&/g," / ")):"（なし：すべて）"; }
+function renderDlInfo(){
+  const p = formParams(); p.set("limit","100");
+  const o = location.origin, base = o+"/api/works?"+p.toString();
+  $("#dl-cond").textContent = condText();
+  $("#api-url").textContent = base;
+  $("#api-curl").textContent = `curl "${base}"\n\n# 次のページ: レスポンスの next_cursor を cursor= に指定\ncurl "${base}&cursor=<next_cursor>"`;
+  $("#oai-id").href = "/oai?verb=Identify"; $("#oai-sets").href = "/oai?verb=ListSets";
+  const set = $("#f-search").site.value ? "&set=site:"+encodeURIComponent($("#f-search").site.value.split("/").pop().replace(/[^A-Za-z0-9\-_.!~*'()]/g,"_")) : (($("#f-search").institution.value)?"&set=inst:"+$("#f-search").institution.value:"");
+  $("#oai-recs").href = "/oai?verb=ListRecords&metadataPrefix=jhub_work"+set;
+}
+let cancelDl = false;
+function flat(w, x){ const f = (a)=>Array.isArray(a)?a.join("; "):(a??""); return {identifier:x.identifier, source:x.source, doi:w.doi, title:w.title, authors:(w.authorships||[]).map(a=>a.raw_author_name).join("; "), year:w.publication_year, date:w.publication_date, type:w.type, language:w.language, journal:w.journal_title, issn:f(w.issn), volume:w.biblio&&w.biblio.volume, issue:w.biblio&&w.biblio.issue, first_page:w.biblio&&w.biblio.first_page, last_page:w.biblio&&w.biblio.last_page, publisher:w.publisher, site_id:x.site_id, institution_code:x.institution_code, open_access:w.open_access&&w.open_access.is_oa, has_abstract:w.has_abstract_in_source, references_count:w.references_count, updated:x.updated}; }
+function csvCell(v){ v = v==null?"":String(v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+$("#dl-cancel").onclick = () => { cancelDl = true; };
+$("#dl-go").onclick = async () => {
+  const max = +$("#dl-max").value, fmt = $("#dl-fmt").value, p = formParams();
+  p.set("limit","500"); cancelDl = false;
+  $("#dl-go").disabled = true; $("#dl-cancel").disabled = false;
+  const items = []; let cursor = "", total = 0;
+  try{
+    while(items.length < max && !cancelDl){
+      const q = new URLSearchParams(p); if(cursor) q.set("cursor", cursor);
+      const r = await api("/api/works?"+q); total = r.total;
+      items.push(...r.results);
+      $("#dl-bar").style.width = Math.min(100, items.length/Math.min(max,total||1)*100)+"%";
+      $("#dl-msg").textContent = `${num(Math.min(items.length,max))} / ${num(Math.min(max,total))}件を取得中…`;
+      if(!r.next_cursor) break; cursor = r.next_cursor;
+    }
+    const use = items.slice(0,max); let body, mime, ext;
+    if(fmt==="jsonl"){ body = use.map(x=>JSON.stringify(x)).join("\n")+"\n"; mime="application/x-ndjson"; ext="jsonl"; }
+    else if(fmt==="json"){ body = JSON.stringify(use,null,1); mime="application/json"; ext="json"; }
+    else { const rows = use.map(x=>flat(x.work||{},x)); const cols = rows.length?Object.keys(rows[0]):[]; body = "﻿"+[cols.join(",")].concat(rows.map(r=>cols.map(c=>csvCell(r[c])).join(","))).join("\n"); mime="text/csv"; ext="csv"; }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([body],{type:mime+";charset=utf-8"}));
+    a.download = "jhub_works_"+new Date().toISOString().slice(0,10)+"."+ext; document.body.appendChild(a); a.click(); a.remove();
+    $("#dl-msg").textContent = (cancelDl?"中止しました。":"完了: ")+num(use.length)+"件を保存しました。";
+  }catch(e){ $("#dl-msg").textContent = "エラー: "+e.message; }
+  $("#dl-go").disabled = false; $("#dl-cancel").disabled = true;
+};
+
+// ---------- 収集状況 ----------
+async function loadStatus(){
+  const [s, st] = await Promise.all([api("/api/status"), api("/api/stats")]);
+  const card = (t, inner) => `<div class="card"><h2>${t}</h2>${inner}</div>`;
+  const src = (name, label, extra) => {
+    const r = s.raw && s.raw[name], n = st.by_source[name]||0, files = r?r.files:0;
+    const pf = s.state && s.state[name] && s.state[name].prefixes ? Object.entries(s.state[name].prefixes) : [];
+    return card(label, `<div class="kpi"><div class="n">${num(n)}</div><div class="l">取り込み済みの件数</div></div>
+      <dl style="margin-top:10px"><dt>生データ</dt><dd>${r?num(files)+"ファイル":"不明"}</dd>
+      <dt>収集の実行</dt><dd class="small">${r&&r.runs.length?esc(r.runs.slice(-3).join(", ")):"まだありません"}</dd>
+      ${pf.length?`<dt>最終取得日</dt><dd class="small">${pf.slice(0,8).map(([k,v])=>esc(k)+": "+esc(v)).join("<br>")}${pf.length>8?"<br>…他"+(pf.length-8)+"件":""}</dd>`:""}</dl>${extra||""}`);
+  };
+  const irdbNote = (st.by_source.irdb||0)===0 ? '<div class="note">IRDBの実データは、まだ取り込んでいません。レコード取得（ListRecords）が、NIIに登録したIPアドレスからのみ許可されているためです。NIIに手続きを確認中です。</div>' : "";
+  $("#st-cards").innerHTML = src("jalc","JaLC（J-STAGE等）","") + src("irdb","IRDB（機関リポジトリ）", irdbNote) +
+    card("保存先・取り込み", `<dl><dt>保存先</dt><dd>${esc(s.store||"未設定")}</dd><dt>取り込み済みページ</dt><dd>${num(s.ingested_pages)}</dd><dt>最終更新</dt><dd class="small">${esc(st.last_update||"")}</dd></dl>
+      <div class="small mute">収集は、ターミナルの <code>harvest-jalc</code> / <code>harvest-irdb</code>、取り込みは <code>ingest</code> で実行します。</div>`);
+  try{
+    const x = await (await fetch("/oai?verb=ListSets")).text();
+    const d = new DOMParser().parseFromString(x,"text/xml");
+    const sets = [...d.getElementsByTagName("set")].map(e=>[e.getElementsByTagName("setSpec")[0].textContent, e.getElementsByTagName("setName")[0].textContent]);
+    $("#sets").innerHTML = sets.length ? sets.slice(0,200).map(([a,b])=>`<a href="/oai?verb=ListRecords&metadataPrefix=jhub_work&set=${encodeURIComponent(a)}" target="_blank" rel="noopener"><code>${esc(a)}</code></a> <span class="mute">${esc(b)}</span>`).join("<br>")+(sets.length>200?"<br>…他"+(sets.length-200)+"件":"") : "（なし）";
+  }catch(e){ $("#sets").textContent = "取得できませんでした"; }
+}
+
+// ---------- 起動 ----------
+(async () => {
+  try{ const h = await api("/health"); $("#hdr-dot").className="dot ok"; $("#hdr-health").textContent="稼働中"; }
+  catch(e){ $("#hdr-dot").className="dot bad"; $("#hdr-health").textContent="接続できません"; }
+  loadFilters();
+  try{ await loadDash(); }catch(e){ $("#kpis").innerHTML='<div class="card">データを読み込めません: '+esc(e.message)+'</div>'; }
+  const t = (location.hash||"").slice(1); if(["dash","search","dl","status"].includes(t)) showTab(t);
+})();
+</script>
+</body>
+</html>

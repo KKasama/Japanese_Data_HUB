@@ -7,11 +7,16 @@ OAI-PMH:
   set: irdb | inst:<5桁機関コード> | site:<例 JSTAGE> | jnl:<ISSN等> | pfx:<DOIプレフィックス>
   日時粒度は秒。datestamp はハブが内容の変化を取り込んだ時刻（hub_datestamp）。
 API:
-  /api/stats  /api/institutions  /api/journals  /api/works  /api/works/<identifier>  /health
+  /api/stats  /api/institutions  /api/journals  /api/sites  /api/works  /api/works/<identifier>
+  /api/raw/<identifier>（原データ）  /api/status（収集状況）  /health
+画面:
+  /  （ダッシュボード・検索・ダウンロード・収集状況。jhub/ui/index.html）
 """
 import base64
 import json
+import os
 import re
+import xml.etree.ElementTree as ET
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 from xml.sax.saxutils import escape
@@ -55,11 +60,12 @@ def _b64d(s):
 class Hub:
     def __init__(self, db_path, base_url="http://localhost:8080/oai", admin_email="admin@example.org",
                  repo_name="Japan Scholarly Metadata Hub (prototype)", page_size=100,
-                 max_listed_journal_sets=2000, now=None):
+                 max_listed_journal_sets=2000, now=None, store=None):
         self.db_path, self.base_url, self.admin = db_path, base_url, admin_email
         self.repo_name, self.page_size = repo_name, page_size
         self.max_jsets = max_listed_journal_sets
         self.now = now
+        self.store = store
 
     # ---------------- OAI-PMH ----------------
     def oai(self, params):
@@ -258,7 +264,37 @@ class Hub:
                 by_src = {r[0]: r[1] for r in conn.execute(
                     "SELECT source, COUNT(*) FROM records WHERE deleted=0 GROUP BY source")}
                 unk = conn.execute("SELECT COUNT(*) FROM records WHERE source='irdb' AND institution_code IS NULL").fetchone()[0]
-                return 200, {"records": tot, "deleted": dele, "by_source": by_src, "irdb_without_institution": unk}
+                by_site = {(r[0] or "(IRDB等)"): r[1] for r in conn.execute(
+                    "SELECT site_id, COUNT(*) FROM records WHERE deleted=0 AND source='jalc' "
+                    "GROUP BY site_id ORDER BY 2 DESC")}
+                by_day = {r[0]: r[1] for r in conn.execute(
+                    "SELECT substr(hub_datestamp,1,10) d, COUNT(*) FROM records GROUP BY d ORDER BY d DESC LIMIT 30")}
+                by_type = {(r[0] or "(不明)"): r[1] for r in conn.execute(
+                    "SELECT json_extract(work_json,'$.type'), COUNT(*) FROM records WHERE deleted=0 "
+                    "GROUP BY 1 ORDER BY 2 DESC")}
+                by_year = {str(r[0]): r[1] for r in conn.execute(
+                    "SELECT json_extract(work_json,'$.publication_year') y, COUNT(*) FROM records "
+                    "WHERE deleted=0 AND y BETWEEN 1000 AND 2100 GROUP BY y ORDER BY y")}
+                abs_n = conn.execute("SELECT COUNT(*) FROM records WHERE deleted=0 AND "
+                                     "json_extract(work_json,'$.has_abstract_in_source')=1").fetchone()[0]
+                oa_n = conn.execute("SELECT COUNT(*) FROM records WHERE deleted=0 AND "
+                                    "json_extract(work_json,'$.open_access.is_oa')=1").fetchone()[0]
+                orcid_n = conn.execute("SELECT COUNT(*) FROM records WHERE deleted=0 AND "
+                                       "work_json LIKE '%\"orcid\": \"%'").fetchone()[0]
+                last = conn.execute("SELECT MAX(hub_datestamp) FROM records").fetchone()[0]
+                return 200, {"records": tot, "deleted": dele, "by_source": by_src, "irdb_without_institution": unk,
+                             "by_site": by_site, "by_day": by_day, "by_type": by_type, "by_year": by_year,
+                             "with_abstract_flag": abs_n, "open_access": oa_n, "with_orcid": orcid_n,
+                             "last_update": last}
+            if path == "/api/sites":
+                return 200, {"sites": [{"site_id": r[0], "records": r[1]} for r in conn.execute(
+                    "SELECT site_id, COUNT(*) FROM records WHERE deleted=0 AND site_id IS NOT NULL "
+                    "GROUP BY site_id ORDER BY 2 DESC")]}
+            if path == "/api/status":
+                return 200, self._status(conn)
+            m = re.match(r"^/api/raw/(.+)$", path)
+            if m:
+                return self._raw(conn, unquote(m.group(1)))
             if path == "/api/institutions":
                 inst = {r["code"]: r for r in conn.execute("SELECT * FROM institutions")}
                 out = []
@@ -310,12 +346,17 @@ class Hub:
                     v = v.zfill(5)
                 w.append("%s=?" % col)
                 a.append(v)
+        if q.get("q"):
+            w.append("(r.doi LIKE ? OR r.work_json LIKE ?)")
+            like = "%" + q["q"].replace("%", "").replace("_", "") + "%"
+            a += [like, like]
         for key, op in (("from", ">="), ("until", "<=")):
             if q.get(key):
                 if not DATE_RE.match(q[key]):
                     raise ValueError("%s は YYYY-MM-DDThh:mm:ssZ 形式で指定してください" % key)
                 w.append("r.hub_datestamp%s?" % op)
                 a.append(q[key])
+        total = conn.execute("SELECT COUNT(*) FROM records r WHERE %s" % " AND ".join(w), a).fetchone()[0]
         if q.get("cursor"):
             c = _b64d(q["cursor"])
             w.append("(r.hub_datestamp,r.identifier)>(?,?)")
@@ -325,7 +366,55 @@ class Hub:
         more = len(rows) > lim
         rows = rows[:lim]
         nxt = _b64e([rows[-1]["hub_datestamp"], rows[-1]["identifier"]]) if more else None
-        return {"results": [self._work_row(r) for r in rows], "next_cursor": nxt}
+        return {"total": total, "results": [self._work_row(r) for r in rows], "next_cursor": nxt}
+
+    # ---------------- 収集状況・原データ（画面用） ----------------
+    def _status(self, conn):
+        out = {"ingested_pages": conn.execute("SELECT COUNT(*) FROM ingested").fetchone()[0],
+               "store": None, "raw": {}, "state": {}}
+        if self.store is None:
+            return out
+        out["store"] = type(self.store).__name__
+        for src in ("irdb", "jalc"):
+            keys = self.store.list("raw/%s/" % src)
+            runs = sorted({k.split("/")[2] for k in keys if len(k.split("/")) > 3})
+            out["raw"][src] = {"files": len(keys), "runs": runs[-10:]}
+            try:
+                out["state"][src] = json.loads(self.store.get("state/%s.json" % src).decode("utf-8"))
+            except Exception:
+                out["state"][src] = None
+        return out
+
+    def _raw(self, conn, ident):
+        r = conn.execute("SELECT source, raw_key, doi FROM records WHERE identifier=?", (ident,)).fetchone()
+        if not r:
+            return 404, {"error": "not found"}
+        if self.store is None or not r["raw_key"]:
+            return 404, {"error": "原データの保存先が設定されていません"}
+        try:
+            raw = self.store.get(r["raw_key"])
+        except Exception as e:
+            return 404, {"error": "原データを読めません: %s" % e}
+        if r["source"] == "jalc":
+            want = (r["doi"] or "").replace("https://doi.org/", "").lower()
+            for line in raw.decode("utf-8").splitlines():
+                try:
+                    d = json.loads(line)
+                except ValueError:
+                    continue
+                if ((d.get("data") or {}).get("doi") or "").lower() == want:
+                    return 200, {"format": "json", "raw_key": r["raw_key"], "raw": d}
+            return 404, {"error": "原データ内に見つかりません"}
+        try:
+            root = ET.fromstring(raw)
+            for rec in root.iter("{%s}record" % OAI_NS):
+                h = rec.find("{%s}header/{%s}identifier" % (OAI_NS, OAI_NS))
+                if h is not None and (h.text or "").strip() == ident:
+                    return 200, {"format": "xml", "raw_key": r["raw_key"],
+                                 "raw": ET.tostring(rec, encoding="unicode")}
+        except ET.ParseError:
+            pass
+        return 404, {"error": "原データ内に見つかりません"}
 
 
 def make_handler(hub):
@@ -345,6 +434,10 @@ def make_handler(hub):
             u = urlparse(self.path)
             if u.path in ("/oai", "/oai/"):
                 self._send(200, "text/xml; charset=utf-8", hub.oai(parse_qs(u.query, keep_blank_values=True)))
+            elif u.path in ("/", "/ui", "/index.html"):
+                p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui", "index.html")
+                with open(p, encoding="utf-8") as f:
+                    self._send(200, "text/html; charset=utf-8", f.read())
             elif u.path == "/health":
                 self._send(200, "application/json", '{"status":"ok"}')
             elif u.path.startswith("/api/"):

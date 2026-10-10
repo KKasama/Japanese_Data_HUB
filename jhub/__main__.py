@@ -64,9 +64,9 @@ def main(argv=None):
         print(load_institutions_csv(connect(cfg["db"]), a.arg), "件")
     elif a.command == "serve":
         hub = Hub(cfg["db"], cfg.get("hub_base_url", "http://%s:%d/oai" % (a.host, a.port)),
-                  cfg.get("admin_email", "admin@example.org"))
+                  cfg.get("admin_email", "admin@example.org"), store=store)
         srv = serve(hub, a.host, a.port)
-        print("serving on http://%s:%d  (/oai, /api/*, /health)" % (a.host, a.port))
+        print("serving on http://%s:%d  (画面: /  、/oai, /api/*, /health)" % (a.host, a.port))
         srv.serve_forever()
     elif a.command == "export":
         export_bulk(cfg["db"], a.out, a.since)

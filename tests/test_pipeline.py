@@ -411,3 +411,31 @@ class JaLCOtherSitesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UITest(unittest.TestCase):
+    def test_ui_and_new_endpoints(self):
+        import json as _j, os as _o, tempfile as _t, threading as _th, urllib.request as _u
+        from jhub.server import Hub, serve
+        from jhub.store import LocalStore
+        tmp = _t.mkdtemp()
+        store, dbp = LocalStore(tmp + "/s"), tmp + "/h.sqlite"
+        jalc = MockJaLC()
+        try:
+            harvest_jalc(JaLCClient(jalc.url, max_rps=0), store, "jalc", log=lambda *a: None)
+            conn = connect(dbp)
+            ingest(store, conn, "jalc", "jalc", log=lambda *a: None)
+            srv = serve(Hub(dbp, store=store), "127.0.0.1", 0)
+            _th.Thread(target=srv.serve_forever, daemon=True).start()
+            base = "http://127.0.0.1:%d" % srv.server_address[1]
+            g = lambda p: _u.urlopen(base + p).read().decode()
+            self.assertIn("<html", g("/"))
+            self.assertIn("by_site", _j.loads(g("/api/stats")))
+            w = _j.loads(g("/api/works?limit=1"))
+            self.assertEqual(w["total"], 4)
+            raw = _j.loads(g("/api/raw/" + w["results"][0]["identifier"].replace(":", "%3A").replace("/", "%2F")))
+            self.assertEqual(raw["format"], "json")
+            self.assertEqual(_j.loads(g("/api/works?q=nomatch"))["total"], 0)
+            srv.shutdown()
+        finally:
+            jalc.stop()
