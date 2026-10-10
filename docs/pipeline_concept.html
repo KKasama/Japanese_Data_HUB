@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>収集・処理の状況（構想イメージ）</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--ink:#1d2430;--mute:#667085;--line:#e3e6eb;--accent:#1f6feb;--ok:#1a7f4b;--okbg:#e7f5ed;--warn:#b54708;--warnbg:#fdf0e1;--bad:#b42318;--badbg:#fde8e6;--idle:#667085;--idlebg:#eef0f3;--code:#f1f3f6}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#12161c;--panel:#1a2029;--ink:#e6e9ef;--mute:#9aa4b2;--line:#2a3340;--accent:#5b9dff;--ok:#4cc38a;--okbg:#14301f;--warn:#f0a35e;--warnbg:#35260f;--bad:#f2786d;--badbg:#3a1a17;--idle:#9aa4b2;--idlebg:#242c38;--code:#222a35}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif}
+header{background:var(--panel);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header h1{font-size:16px;margin:0}
+header .sub{color:var(--mute);font-size:12px}
+main{max-width:1180px;margin:0 auto;padding:16px}
+.banner{background:var(--warnbg);color:var(--warn);border:1px solid var(--warn);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:13px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.card h2{font-size:13px;margin:0 0 10px;color:var(--mute);font-weight:600}
+.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+select{padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);font:inherit}
+.chip{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.chip.ok{background:var(--okbg);color:var(--ok)} .chip.warn{background:var(--warnbg);color:var(--warn)}
+.chip.bad{background:var(--badbg);color:var(--bad)} .chip.idle{background:var(--idlebg);color:var(--idle)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.kpi .n{font-size:24px;font-weight:700;line-height:1.2} .kpi .l{color:var(--mute);font-size:12px}
+.lane{margin-bottom:14px}
+.lane h3{font-size:14px;margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+@media(max-width:900px){.steps{grid-template-columns:repeat(2,1fr)}}
+.step{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel);position:relative;cursor:pointer}
+.step[aria-pressed="true"]{outline:2px solid var(--accent)}
+.step .nm{font-size:12px;color:var(--mute)} .step .ct{font-size:20px;font-weight:700;margin:2px 0}
+.step .sub{font-size:12px;color:var(--mute);min-height:34px}
+.step.ok{border-top:3px solid var(--ok)} .step.warn{border-top:3px solid var(--warn)}
+.step.bad{border-top:3px solid var(--bad)} .step.idle{border-top:3px solid var(--idle);opacity:.85}
+.bar{height:6px;background:var(--code);border-radius:3px;margin:6px 0;overflow:hidden;display:flex}
+.bar i{display:block;height:6px} .bar .g{background:var(--ok)} .bar .y{background:var(--warn)} .bar .r{background:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mute);font-weight:600;font-size:12px}
+.next{display:grid;gap:8px}
+.nx{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.nx .no{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}
+.nx.done .no{background:var(--ok)} .nx.blocked .no{background:var(--idle)}
+code{background:var(--code);padding:1px 6px;border-radius:4px;font-size:12px}
+.mute{color:var(--mute)} .small{font-size:12px}
+.two{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+.detail{border-left:3px solid var(--accent);padding:6px 12px;background:var(--code);border-radius:4px;font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<header>
+  <h1>収集・処理の状況 <span class="sub">構想イメージ</span></h1>
+  <span class="sub">日本版研究情報ハブ（試作）</span>
+</header>
+<main>
+  <div class="banner"><b>これは表示の構想イメージです。</b>数値・エラー内容は、説明のための模擬データで、実際の収集結果ではありません。実際の画面では、収集のたびに記録した実績が表示されます。</div>
+
+  <div class="card top">
+    <label>表示する実行：
+      <select id="run">
+        <option value="a">2026-10-14 02:00　JaLC 差分収集（一部エラー）</option>
+        <option value="b">2026-10-13 02:00　JaLC 差分収集（正常）</option>
+        <option value="c">2026-10-13 03:00　IRDB 収集（IP未登録で失敗）</option>
+      </select>
+    </label>
+    <span id="run-chip"></span>
+    <span class="small mute" id="run-meta"></span>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="card">
+    <h2>処理の流れ（工程をクリックすると詳細が表示されます）</h2>
+    <div id="lanes"></div>
+    <div class="detail" id="detail"></div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <h2>エラーと警告の内訳</h2>
+      <table><thead><tr><th>種類</th><th>件数</th><th>例</th><th>対応</th></tr></thead><tbody id="errs"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>次の工程</h2>
+      <div class="next" id="next"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>直近の実行履歴</h2>
+    <table><thead><tr><th>日時</th><th>種類</th><th>対象</th><th>取得</th><th>エラー</th><th>状態</th></tr></thead><tbody id="hist"></tbody></table>
+  </div>
+</main>
+<script>
+"use strict";
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const n=x=>x.toLocaleString("ja-JP");
+const chip=(st,t)=>`<span class="chip ${st}">${esc(t)}</span>`;
+const LABEL={ok:"正常",warn:"一部エラー",bad:"失敗",idle:"待機中"};
+
+// ---- 模擬データ ----
+const RUNS={
+ a:{status:"warn",meta:"所要 38分 ／ 対象: SI/JST.JSTAGE ほか3サイト ／ 前回以降の更新分",
+  kpis:[["取得対象",1240,""],["取り込み済み",1229,""],["エラー",7,"0.56%"],["警告",4,""],["新規",980,""],["更新",249,""]],
+  lanes:[
+   {name:"JaLC（J-STAGE等）",st:"warn",steps:[
+    {nm:"1 収集（API）",st:"warn",ct:"1,240件",sub:"エラー 7件／リトライで回復 3件",bar:[99.4,0,0.6],d:"JaLC REST APIから、前回以降に更新されたDOIを取得します。通信の失敗は自動で再試行（最大3回）し、回復できなかったものだけをエラーとして記録します。"},
+    {nm:"2 生データ保存",st:"ok",ct:"1,233件",sub:"取得した原データを、そのまま保存",bar:[100,0,0],d:"取得した原データを、加工せずに保存します。以後の整形ルールの変更時は、再取得せずに、この原データから作り直せます。"},
+    {nm:"3 取り込み",st:"ok",ct:"1,233件",sub:"新規 980／更新 249／変更なし 4",bar:[100,0,0],d:"内容が変わったものだけ、更新日時を進めます。変更のないものは、更新扱いにしません（差分取得の精度を保つため）。"},
+    {nm:"4 振り分け",st:"ok",ct:"1,233件",sub:"サイト4／ジャーナル312／プレフィックス37",bar:[100,0,0],d:"機関、ジャーナル（ISSN）、サイト、DOIプレフィックスごとの区分に振り分けます。"},
+    {nm:"5 整形",st:"warn",ct:"1,229件",sub:"警告 4件（出版年が不明）",bar:[99.7,0.3,0],d:"OpenAlexが取り込みやすい形に整えます。出版年が9999などの仮の値は「不明」にし、警告として記録します。抄録は出力しません（有無のみ）。"},
+    {nm:"6 提供",st:"ok",ct:"反映済み",sub:"OAI-PMH／JSON API／ファイル",bar:[100,0,0],d:"整形後のデータが、OAI-PMHとAPIから取得できる状態になりました。提供先ごとに、取得できる範囲を設定できます。"}]},
+   {name:"IRDB（機関リポジトリ）",st:"idle",steps:[
+    {nm:"1 収集（API）",st:"idle",ct:"—",sub:"申請IPからのみ取得可能（登録待ち）",bar:[0,0,0],d:"IRDBのレコード取得は、NIIに登録したIPアドレスからのみ許可されています。固定IPの環境を準備し、NIIに登録手続きを確認しています。"},
+    {nm:"2 生データ保存",st:"idle",ct:"—",sub:"",bar:[0,0,0],d:"収集の完了後に実行されます。"},
+    {nm:"3 取り込み",st:"idle",ct:"—",sub:"",bar:[0,0,0],d:"収集の完了後に実行されます。"},
+    {nm:"4 振り分け",st:"idle",ct:"—",sub:"機関コードで機関別に",bar:[0,0,0],d:"IRDBのヘッダーにある機関コードで、機関別に分けます。"},
+    {nm:"5 整形",st:"idle",ct:"—",sub:"",bar:[0,0,0],d:"収集の完了後に実行されます。"},
+    {nm:"6 提供",st:"idle",ct:"—",sub:"",bar:[0,0,0],d:"収集の完了後に実行されます。"}]}],
+  errs:[["通信エラー（タイムアウト）",3,"api…/v2/dois/10.11162/…","自動再試行で回復済み"],["DOIが見つからない（404）",2,"10.11162/xxxx.123","要確認（削除された可能性）"],["データの解析失敗",2,"JSONが途中で切れている","次回の収集で再取得"],["整形の警告：出版年が不明",4,"年 9999（NDL）","「不明」として取り込み済み"]],
+  next:[["done","生データの保存と取り込み","完了"],["","エラー7件の再取得","次回の収集（10/15 02:00）で自動実行"],["","404の2件を確認","担当者の確認が必要"],["","OpenAlex向けの差分を公開","自動（取り込み完了後）"],["blocked","IRDBの収集","IP登録待ち"]]},
+ b:{status:"ok",meta:"所要 31分 ／ 対象: SI/JST.JSTAGE ほか3サイト ／ 前回以降の更新分",
+  kpis:[["取得対象",860,""],["取り込み済み",860,""],["エラー",0,"0%"],["警告",0,""],["新規",702,""],["更新",158,""]],
+  lanes:null,errs:[],next:[["done","生データの保存と取り込み","完了"],["done","OpenAlex向けの差分を公開","完了"],["","次回の定期収集","10/14 02:00"],["blocked","IRDBの収集","IP登録待ち"]]},
+ c:{status:"bad",meta:"所要 2分 ／ 対象: IRDB（OAI-PMH）／ 全件取得の試行",
+  kpis:[["取得対象","—",""],["取り込み済み",0,""],["エラー",1,"100%"],["警告",0,""],["新規",0,""],["更新",0,""]],
+  lanes:null,errs:[["アクセス拒否（badArgument）",1,"verb=ListRecords","IPが未登録の可能性。NIIに確認中"]],
+  next:[["","NIIからの回答を待つ","IPの登録手続きと、所要期間を確認中"],["","固定IPの環境を準備","クラウドVMなど"],["blocked","IRDBの収集を再実行","IP登録後"]]}
+};
+// 実行bは全工程が正常、cはIRDBのみ失敗の表示を、aの構造から作る
+const A=RUNS.a.lanes;
+RUNS.b.lanes=[{name:"JaLC（J-STAGE等）",st:"ok",steps:A[0].steps.map((s,i)=>({...s,st:"ok",bar:[100,0,0],ct:["860件","860件","860件","860件","860件","反映済み"][i],sub:["エラーなし","","新規 702／更新 158","サイト4／ジャーナル298","警告なし",s.sub][i]}))},A[1]];
+RUNS.c.lanes=[{name:"JaLC（J-STAGE等）",st:"idle",steps:A[0].steps.map(s=>({...s,st:"idle",ct:"—",sub:"この実行の対象外",bar:[0,0,0]}))},
+ {name:"IRDB（機関リポジトリ）",st:"bad",steps:[{nm:"1 収集（API）",st:"bad",ct:"0件",sub:"エラー: アクセス拒否",bar:[0,0,100],d:"IRDBのレコード取得（ListRecords）が、badArgumentで拒否されました。登録IP以外からのアクセスであることが原因と考えられます。"},...A[1].steps.slice(1).map(s=>({...s,st:"idle"}))]}];
+
+const HIST=[["2026-10-14 02:00","JaLC 差分収集","J-STAGE ほか3サイト","1,240","7","warn"],["2026-10-13 03:00","IRDB 収集","全件（試行）","0","1","bad"],["2026-10-13 02:00","JaLC 差分収集","J-STAGE ほか3サイト","860","0","ok"],["2026-10-12 02:00","JaLC 差分収集","J-STAGE ほか3サイト","912","0","ok"],["2026-10-11 02:00","JaLC 差分収集","J-STAGE ほか3サイト","1,018","2","warn"]];
+
+function render(k){
+  const r=RUNS[k];
+  $("#run-chip").innerHTML=chip(r.status,LABEL[r.status]); $("#run-meta").textContent=r.meta;
+  $("#kpis").innerHTML=r.kpis.map(([l,v,s])=>`<div class="card kpi" style="margin:0"><div class="n">${typeof v==="number"?n(v):v}</div><div class="l">${l}${s?"（"+s+"）":""}</div></div>`).join("");
+  $("#lanes").innerHTML=r.lanes.map((ln,li)=>`<div class="lane"><h3>${esc(ln.name)} ${chip(ln.st,LABEL[ln.st])}</h3><div class="steps">`+ln.steps.map((s,si)=>{
+    const [g,y,rd]=s.bar;
+    return `<div class="step ${s.st}" role="button" tabindex="0" aria-pressed="false" data-l="${li}" data-s="${si}"><div class="nm">${esc(s.nm)}</div><div class="ct">${esc(s.ct)}</div><div class="bar"><i class="g" style="width:${g}%"></i><i class="y" style="width:${y}%"></i><i class="r" style="width:${rd}%"></i></div><div class="sub">${esc(s.sub)}</div></div>`;}).join("")+`</div></div>`).join("");
+  $("#detail").innerHTML="工程をクリックすると、その工程で行っていることと、状態が表示されます。";
+  document.querySelectorAll(".step").forEach(e=>{const f=()=>{document.querySelectorAll(".step").forEach(x=>x.setAttribute("aria-pressed","false"));e.setAttribute("aria-pressed","true");const s=r.lanes[+e.dataset.l].steps[+e.dataset.s];$("#detail").innerHTML="<b>"+esc(s.nm)+"</b>　"+chip(s.st,LABEL[s.st])+"<br>"+esc(s.d);};e.onclick=f;e.onkeydown=ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();f();}};});
+  $("#errs").innerHTML=r.errs.length?r.errs.map(e=>`<tr><td>${esc(e[0])}</td><td>${e[1]}</td><td class="small mute">${esc(e[2])}</td><td class="small">${esc(e[3])}</td></tr>`).join(""):'<tr><td colspan="4" class="mute">エラー・警告はありません</td></tr>';
+  $("#next").innerHTML=r.next.map((x,i)=>`<div class="nx ${x[0]}"><span class="no">${x[0]==="done"?"✓":i+1}</span><div>${esc(x[1])}<div class="small mute">${esc(x[2])}</div></div></div>`).join("");
+}
+$("#hist").innerHTML=HIST.map(h=>`<tr><td>${h[0]}</td><td>${h[1]}</td><td>${h[2]}</td><td>${h[3]}</td><td>${h[4]}</td><td>${chip(h[5],LABEL[h[5]])}</td></tr>`).join("");
+$("#run").onchange=e=>render(e.target.value);
+render("a");
+</script>
+</body>
+</html>
