@@ -1,0 +1,128 @@
+レコード数: 30  ファイル数: 6
+
+content_type: {'RD': 15, 'BK': 5, 'JA': 10}
+siteId: {'SI/JST.JSTAGE_Data': 10, 'SI/JST.preprint': 5, 'SI/NDL.NDL.Search': 5, 'SI/JST.JSTAGE': 10}
+
+項目（パス / 型 / 値の例 / 出現数）:
+  data.alternate_identifier_list[]              list   1                                                                x5
+  data.alternate_identifier_list[].alternate_identifier str    "oai:iss.ndl.go.jp:R100000039-I000118712-00"                     x5
+  data.alternate_identifier_list[].type         str    "OAIPMH"                                                         x5
+  data.article_number                           str    "13C0701"                                                        x4
+  data.article_type                             str    "pub"                                                            x10
+  data.book_classification                      str    "01"                                                             x5
+  data.citation_list[]                          list   1                                                                x9
+  data.citation_list[].content_language         str    "en"                                                             x8
+  data.citation_list[].creator_list[]           list   1                                                                x4
+  data.citation_list[].creator_list[].names[]   list   1                                                                x5
+  data.citation_list[].creator_list[].names[].first_name str    "H."                                                             x5
+  data.citation_list[].creator_list[].names[].lang str    "en"                                                             x5
+  data.citation_list[].creator_list[].names[].last_name str    "HIRANO"                                                         x5
+  data.citation_list[].creator_list[].sequence  str    "1"                                                              x5
+  data.citation_list[].creator_list[].type      str    "person"                                                         x5
+  data.citation_list[].doi                      str    "10.1007/BF01925580"                                             x4
+  data.citation_list[].first_page               str    "32"                                                             x13
+  data.citation_list[].issue                    str    "10"                                                             x4
+  data.citation_list[].journal_title_name_list[] list   1                                                                x4
+  data.citation_list[].journal_title_name_list[].journal_title_name str    "Experientia."                                                   x4
+  data.citation_list[].journal_title_name_list[].lang str    "en"                                                             x4
+  data.citation_list[].last_page                str    "715"                                                            x12
+  data.citation_list[].original_text            str    "1) 田中克正，下濃義弘，杉山邦義，西村雅典，古谷誠治，前田達男：有機塩素系化合物含有廃水の処理－ジクロロメタンの処理…    x23
+  data.citation_list[].publication_date.publication_year str    "1997"                                                           x13
+  data.citation_list[].sequence                 str    "1"                                                              x23
+  data.citation_list[].title_list[]             list   1                                                                x12
+  data.citation_list[].title_list[].lang        str    "en"                                                             x12
+  data.citation_list[].title_list[].title       str    "Experimental liver fibrosis induced in rats receiving high …    x12
+  data.citation_list[].volume                   str    "18"                                                             x13
+  data.content_language                         str    "ja"                                                             x10
+  data.content_type                             str    "RD"                                                             x30
+  data.contributor_list[]                       list   1                                                                x5
+  data.contributor_list[].contributor_type      str    "ContactPerson"                                                  x5
+  data.contributor_list[].names[]               list   1                                                                x5
+  data.contributor_list[].names[].first_name    str    "正行"                                                             x5
+  data.contributor_list[].names[].lang          str    "ja"                                                             x5
+  data.contributor_list[].names[].last_name     str    "高山"                                                             x5
+  data.contributor_list[].sequence              str    "1"                                                              x5
+  data.contributor_list[].type                  str    "person"                                                         x5
+  data.creator_list[]                           list   4                                                                x30
+  data.creator_list[].affiliation_list[]        list   2                                                                x35
+  data.creator_list[].affiliation_list[].affiliation_name_list[] list   1                                                                x48
+  data.creator_list[].affiliation_list[].affiliation_name_list[].affiliation_name str    "文部科学省　科学技術・学術政策研究所"                                             x69
+  data.creator_list[].affiliation_list[].affiliation_name_list[].lang str    "ja"                                                             x69
+  data.creator_list[].affiliation_list[].sequence str    "1"                                                              x48
+  data.creator_list[].names[]                   list   1                                                                x64
+  data.creator_list[].names[].first_name        str    "Yumiko"                                                         x96
+  data.creator_list[].names[].lang              str    "en"                                                             x91
+  data.creator_list[].names[].last_name         str    "HIGASHI"                                                        x91
+  data.creator_list[].researcher_id_list[]      list   1                                                                x8
+  data.creator_list[].researcher_id_list[].id_code str    "https://orcid.org/0000-0003-3580-8897"                          x8
+  data.creator_list[].researcher_id_list[].type str    "orcid"                                                          x8
+  data.creator_list[].sequence                  str    "1"                                                              x64
+  data.creator_list[].type                      str    "person"                                                         x59
+  data.date                                     str    "2011-12-01"                                                     x10
+  data.date_list[]                              list   3                                                                x15
+  data.date_list[].date                         str    "2020-02-19T04:35:16"                                            x35
+  data.date_list[].type                         str    "Submitted"                                                      x35
+  data.description_list[]                       list   1                                                                x15
+  data.description_list[].description           str    "A survey report on digitization situation of local newspape…    x20
+  data.description_list[].lang                  str    "en"                                                             x20
+  data.description_list[].type                  str    "Abstract"                                                       x20
+  data.doi                                      str    "10.34450/data.jsda.11868948"                                    x30
+  data.edition.format                           str    "image/jp2"                                                      x5
+  data.edition.version                          str    "1.0"                                                            x15
+  data.first_page                               str    "27"                                                             x10
+  data.format_list[]                            list   1                                                                x10
+  data.fund_list[]                              list   4                                                                x5
+  data.fund_list[].funder_name[]                list   1                                                                x15
+  data.fund_list[].funder_name[].funder_name    str    "Program for Promoting Researches on the Supercomputer Fugak…    x15
+  data.fund_list[].funder_name[].lang           str    "en"                                                             x15
+  data.issue                                    str    "1"                                                              x10
+  data.journal_classification                   str    "01"                                                             x10
+  data.journal_id_list[]                        list   3                                                                x10
+  data.journal_id_list[].issn_type              str    "print"                                                          x20
+  data.journal_id_list[].journal_id             str    "1884-4375"                                                      x30
+  data.journal_id_list[].type                   str    "ISSN"                                                           x30
+  data.journal_title_name_list[]                list   4                                                                x10
+  data.journal_title_name_list[].journal_title_name str    "Journal of Environment and Safety"                              x30
+  data.journal_title_name_list[].lang           str    "en"                                                             x30
+  data.journal_title_name_list[].type           str    "full"                                                           x30
+  data.keyword_list[]                           list   10                                                               x10
+  data.keyword_list[].keyword                   str    "揮発性有機化合物"                                                       x30
+  data.keyword_list[].lang                      str    "ja"                                                             x30
+  data.keyword_list[].sequence                  str    "1"                                                              x30
+  data.last_page                                str    "34"                                                             x10
+  data.prefix                                   str    "10.34450"                                                       x30
+  data.publication_date.publication_day         str    "28"                                                             x15
+  data.publication_date.publication_month       str    "02"                                                             x15
+  data.publication_date.publication_year        str    "2020"                                                           x30
+  data.publisher_list[]                         list   1                                                                x30
+  data.publisher_list[].lang                    str    "en"                                                             x35
+  data.publisher_list[].location                str    "JPN"                                                            x5
+  data.publisher_list[].publisher_name          str    "Japan Society for Digital Archive"                              x40
+  data.ra                                       str    "JaLC"                                                           x30
+  data.recorded_year                            str    "2010-2014"                                                      x10
+  data.relation_list[]                          list   1                                                                x30
+  data.relation_list[].content                  str    "10.24506/jsda.3.1_35"                                           x41
+  data.relation_list[].relation                 str    "IsReferencedBy"                                                 x41
+  data.relation_list[].type                     str    "DOI"                                                            x41
+  data.repository_list[]                        list   2                                                                x5
+  data.repository_list[].lang                   str    "ja"                                                             x10
+  data.repository_list[].repository_name        str    "Jxiv"                                                           x10
+  data.resource_kind                            str    "Figure"                                                         x15
+  data.resource_type                            str    "Image"                                                          x15
+  data.rights_list[]                            list   1                                                                x15
+  data.rights_list[].rights                     str    "CC BY 4.0"                                                      x15
+  data.rights_list[].uri                        str    "https://creativecommons.org/licenses/by/4.0/"                   x15
+  data.signature                                str    "Jxiv, JSTプレプリントサーバ"                                             x5
+  data.siteId                                   str    "SI/JST.JSTAGE_Data"                                             x30
+  data.site_name                                str    "J-STAGE Data"                                                   x30
+  data.size_list[]                              list   1                                                                x35
+  data.subject_list[]                           list   6                                                                x15
+  data.subject_list[].lang                      str    "en"                                                             x45
+  data.subject_list[].subject                   str    "regional newspaper"                                             x45
+  data.title_list[]                             list   1                                                                x30
+  data.title_list[].lang                        str    "en"                                                             x34
+  data.title_list[].subtitle                    str    "統計的因果探索アルゴリズム’’LiNGAM’’による試行的分析"                                x7
+  data.title_list[].title                       str    "A survey report on digitization situation of local newspape…    x44
+  data.updated_date                             str    "2023-07-27"                                                     x30
+  data.url                                      str    "https://doi.org/10.34450/data.jsda.11868948"                    x30
+  data.volume                                   str    "1"                                                              x10

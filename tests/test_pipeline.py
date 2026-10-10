@@ -343,5 +343,71 @@ class ReprocessTest(unittest.TestCase):
         finally:
             jalc.stop()
 
+
+class JaLCOtherSitesTest(unittest.TestCase):
+    """J-STAGE Data / Jxiv / NDL の実データ（2026-10-10取得）の構造に基づく。"""
+
+    def test_jxiv_preprint(self):
+        from jhub.normalize import normalize_jalc
+        w = normalize_jalc({
+            "siteId": "SI/JST.preprint", "content_type": "RD", "doi": "10.51094/jxiv.1", "prefix": "10.51094",
+            "resource_type": "Preprint", "site_name": "JST preprint",
+            "title_list": [{"lang": "ja", "title": "因果モデル", "subtitle": "試行的分析"},
+                           {"lang": "en", "title": "Causal Model", "subtitle": "Trial Analysis"}],
+            "creator_list": [{"names": [{"lang": "ja", "last_name": "高山", "first_name": "正行"},
+                                        {"lang": "en", "last_name": "TAKAYAMA", "first_name": "Masayuki"}],
+                              "researcher_id_list": [{"id_code": "https://orcid.org/0000-0003-3580-8897", "type": "orcid"}]}],
+            "publication_date": {"publication_year": "2022", "publication_month": "03", "publication_day": "25"},
+            "rights_list": [{"rights": "CC BY-NC-ND 4.0", "uri": "https://creativecommons.org/licenses/by-nc-nd/4.0"}],
+            "description_list": [{"description": "<p>要旨</p>", "type": "Abstract", "lang": "ja"}],
+            "repository_list": [{"repository_name": "Jxiv", "lang": "ja"}, {"repository_name": "Jxiv", "lang": "en"}]})
+        self.assertEqual(w["type"], "preprint")
+        self.assertEqual(w["display_name"], "Causal Model: Trial Analysis")
+        self.assertEqual(w["title"], "因果モデル: 試行的分析")
+        self.assertEqual(w["authorships"][0]["author"]["orcid"], "https://orcid.org/0000-0003-3580-8897")
+        self.assertTrue(w["has_abstract_in_source"])
+        self.assertNotIn("abstract", w)
+        self.assertEqual(w["publication_date"], "2022-03-25")
+        self.assertTrue(w["open_access"]["is_oa"])
+        self.assertEqual(w["primary_location"]["source"]["type"], "repository")
+        self.assertEqual(w["primary_location"]["source"]["display_name"], "Jxiv")
+
+    def test_jstage_data_funders_and_relations(self):
+        from jhub.normalize import normalize_jalc
+        w = normalize_jalc({
+            "siteId": "SI/JST.JSTAGE_Data", "content_type": "RD", "doi": "10.34474/data.jmsj.1", "prefix": "10.34474",
+            "resource_type": "Dataset", "title_list": [{"lang": "en", "title": "TC data"}],
+            "creator_list": [{"names": [{"lang": "en", "last_name": "Satoh", "first_name": "Masaki"}]}],
+            "fund_list": [{"funder_name": [{"funder_name": "SPIRE", "lang": "en"}]}],
+            "relation_list": [{"content": "10.2151/jmsj.2015-025", "type": "DOI", "relation": "IsReferencedBy"}],
+            "date_list": [{"date": "2020-11-19T01:51:57", "type": "Issued"}]})
+        self.assertEqual(w["type"], "dataset")
+        self.assertEqual(w["grants"][0]["funder_display_name"], "SPIRE")
+        self.assertEqual(w["relations"][0]["relation"], "IsReferencedBy")
+        self.assertEqual(w["dates"]["Issued"], "2020-11-19T01:51:57")
+        self.assertFalse(w["has_abstract_in_source"])
+
+    def test_ndl_placeholders(self):
+        from jhub.normalize import normalize_jalc
+        w = normalize_jalc({
+            "siteId": "SI/NDL.NDL.Search", "content_type": "BK", "doi": "10.11501/1287699", "prefix": "10.11501",
+            "title_list": [{"title": "十二月遊ひ 下"}],
+            "creator_list": [{"sequence": "1", "names": [{"first_name": "[ -- ]"}]}],
+            "publication_date": {"publication_year": "9999"},
+            "alternate_identifier_list": [{"alternate_identifier": "oai:iss.ndl.go.jp:R1-I2-00", "type": "OAIPMH"}]})
+        self.assertEqual(w["type"], "book")
+        self.assertEqual(w["authorships"], [])
+        self.assertIsNone(w["publication_year"])
+        self.assertEqual(w["titles"][0]["lang"], "ja")
+        self.assertEqual(w["ids"]["alternate"][0]["type"], "OAIPMH")
+
+    def test_references_dois_for_article(self):
+        from jhub.normalize import normalize_jalc
+        w = normalize_jalc({"siteId": "SI/JST.JSTAGE", "content_type": "JA", "doi": "10.11162/x.1",
+                            "title_list": [{"lang": "en", "title": "T"}],
+                            "citation_list": [{"doi": "10.1007/BF01925580"}, {"original_text": "x"}]})
+        self.assertEqual(w["references_count"], 2)
+        self.assertEqual(w["referenced_dois"], ["10.1007/bf01925580"])
+
 if __name__ == "__main__":
     unittest.main()
