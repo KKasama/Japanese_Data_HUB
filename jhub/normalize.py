@@ -3,6 +3,7 @@
 本番では、既存の「JaLC–OpenAlex 項目対応表（79項目）」に置き換える。
 方針: 抄録(abstract)は出力しない。有無だけ has_abstract_in_source として記録する。
 """
+import html as _html
 import re
 
 from .classify import clean_doi, doi_prefix, journal_key, normalize_issn
@@ -163,88 +164,79 @@ def normalize_jpcoar(meta, header_identifier=None):
 
 
 # ---- JaLC (REST v2 JSON) -------------------------------------------------
+# 構造は、2026-10-10 に実データ（J-STAGE 10.11162 の20件）で確認したもの。
 
-_SKIP = ("lang", "language", "sequence", "type", "seq")
-
-
-def _first_text(d, keys):
-    for k in keys:
-        if isinstance(d.get(k), str) and d[k]:
-            return d[k]
-    for k, v in d.items():  # 想定外のキー名でも、言語・連番以外の最初の文字列を採る
-        if k not in _SKIP and isinstance(v, str) and v:
-            return v
-    return None
-
-
-def _lang_texts(x, keys=("title", "text", "name", "keyword", "value", "content")):
-    """辞書 {lang: text} / [{lang, <key>: text}] / [str] のどの形でも [(lang, text)] にする。"""
+def _lang_texts(x, keys=("title", "text", "name", "value", "content")):
+    """[{lang, <key>: text}] / {lang: text} / [str] → [(lang, text)]（キー名の揺れに備える）。"""
     out = []
     if x is None:
         return out
     if isinstance(x, str):
         return [(None, x)]
-    if isinstance(x, dict):
-        for k, v in x.items():
-            if isinstance(v, str):
-                out.append((k, v))
-            elif isinstance(v, dict):
-                t = _first_text(v, keys)
-                if t:
-                    out.append((k, t))
-        return out
-    if isinstance(x, list):
-        for it in x:
-            if isinstance(it, str):
-                out.append((None, it))
-            elif isinstance(it, dict):
-                t = _first_text(it, keys)
-                if t:
-                    out.append((it.get("lang") or it.get("language"), t))
+    items = x.items() if isinstance(x, dict) else enumerate(x)
+    for k, it in items:
+        if isinstance(it, str):
+            out.append((k if isinstance(x, dict) else None, it))
+        elif isinstance(it, dict):
+            t = next((it[kk] for kk in keys if isinstance(it.get(kk), str) and it[kk]), None)
+            if t:
+                out.append((it.get("lang") or (k if isinstance(x, dict) else None), t))
     return out
 
 
-def _creator_name(c):
-    """creator_list の1要素から氏名を取り出す（キー構造の違いに備えた防御的実装）。"""
-    names = []
-    for k in ("names", "name", "creator_name"):
-        if k in c:
-            names += _lang_texts(c[k], keys=("name", "full_name", "text"))
-    if not names:
-        for lang in ("ja", "en"):
-            v = c.get(lang)
-            if isinstance(v, dict):
-                nm = v.get("name") or " ".join(x for x in (v.get("last_name"), v.get("first_name")) if x)
-                if nm:
-                    names.append((lang, nm))
-    return names
+def clean_text(t):
+    """表示用テキスト: HTMLタグを除去し、文字参照（&quot; 等）を戻し、空白を整える。
+    生データ（raw）は別に保存されているので、ここでは元に影響しない。"""
+    if not isinstance(t, str):
+        return t
+    t = re.sub(r"<[^>]+>", "", t)
+    t = _html.unescape(t)
+    return re.sub(r"\s+", " ", t).strip()
 
 
-def _find_strings(x, key_hint):
-    out = []
-    if isinstance(x, dict):
-        for k, v in x.items():
-            if key_hint in k.lower():
-                out += [t for _, t in _lang_texts(v, keys=("name", "text", "affiliation"))]
-            else:
-                out += _find_strings(v, key_hint)
-    elif isinstance(x, list):
-        for it in x:
-            out += _find_strings(it, key_hint)
-    return out
+def _guess_lang(t):
+    """lang が無い題名の言語を文字種で推定（かな・漢字を含めば ja、なければ en）。"""
+    import re
+    return "ja" if re.search(r"[\u3040-\u30ff\u4e00-\u9fff]", t or "") else "en"
+
+
+def _jalc_date(rec):
+    """publication_date は {publication_year, publication_month, publication_day}（月・日は無いことがある）。"""
+    pd = rec.get("publication_date")
+    if isinstance(pd, dict):
+        y, m, d = pd.get("publication_year"), pd.get("publication_month"), pd.get("publication_day")
+        if y and m and d:
+            return "%04d-%02d-%02d" % (int(y), int(m), int(d))
+        if y and m:
+            return "%04d-%02d" % (int(y), int(m))
+        if y:
+            return "%04d" % int(y)
+    elif isinstance(pd, str):
+        return pd
+    return rec.get("date") or ""
+
+
+def _jalc_person_name(n):
+    """names[] の1件 {lang, last_name, first_name}。日本語は「姓 名」、それ以外は「名 姓」。"""
+    last, first = (n.get("last_name") or "").strip(), (n.get("first_name") or "").strip()
+    if not (last or first):
+        return n.get("name") or None
+    if n.get("lang") == "ja":
+        return (last + " " + first).strip()
+    return (first + " " + last).strip()
 
 
 def normalize_jalc(rec):
     """JaLC REST v2 の data 部（dict）→ work dict。"""
     w = {"ids": {}, "authorships": [], "keywords": [], "grants": []}
     doi = clean_doi(rec.get("doi"))
-    titles = _lang_texts(rec.get("title_list"))
+    titles = [(l or _guess_lang(clean_text(t)), clean_text(t)) for l, t in _lang_texts(rec.get("title_list"))]
     w["titles"] = [{"lang": l, "text": t} for l, t in titles]
     ja = [x for x in titles if x[0] == "ja"] or titles
     en = [x for x in titles if x[0] == "en"] or titles
     w["title"] = ja[0][1] if ja else None            # 原題（日本語優先）
     w["display_name"] = en[0][1] if en else None      # JST対応表: 英語優先
-    pd = rec.get("publication_date") or rec.get("date") or ""
+    pd = _jalc_date(rec)
     w["publication_year"] = _year(pd)
     w["publication_date"] = _full_date(pd)
     w["language"] = _lang2(rec.get("content_language"))
@@ -262,54 +254,70 @@ def normalize_jalc(rec):
 
     creators = rec.get("creator_list") or []
     for n, c in enumerate(creators):
-        names = _creator_name(c) if isinstance(c, dict) else []
+        if not isinstance(c, dict):
+            continue
+        names = [(x.get("lang"), _jalc_person_name(x)) for x in (c.get("names") or []) if isinstance(x, dict)]
+        names = [(l, t) for l, t in names if t]
+        if not names:  # 団体名など
+            names = _lang_texts(c.get("names") or c.get("name"), keys=("name", "organization_name", "text"))
+        en_ = [x for x in names if x[0] == "en"] or names
+        affs = []
+        for a in c.get("affiliation_list") or []:
+            for an in (a.get("affiliation_name_list") or []) if isinstance(a, dict) else []:
+                t = an.get("affiliation_name") if isinstance(an, dict) else None
+                if t and t not in affs:
+                    affs.append(t)
         pos = "first" if n == 0 else ("last" if n == len(creators) - 1 else "middle")
         w["authorships"].append({
             "author_position": pos,
-            "author": {"display_name": _pick_name(names), "orcid": None},
-            "raw_author_name": _pick_name(names),
-            "raw_affiliation_strings": _find_strings(c, "affiliation") if isinstance(c, dict) else [],
+            "author": {"display_name": en_[0][1] if en_ else None, "orcid": None},
+            "names": [{"lang": l, "text": t} for l, t in names],
+            "raw_author_name": en_[0][1] if en_ else None,
+            "raw_affiliation_strings": affs,
             "institutions": [],
         })
 
     printed, other, jid = [], [], None
     for it in rec.get("journal_id_list") or []:
-        if isinstance(it, dict):
-            val = it.get("journal_id") or it.get("id") or it.get("value") or it.get("content")
-            typ = (it.get("type") or it.get("issn_type") or "").upper()
-        else:
-            val, typ = it, ""
-        n = normalize_issn(val) if val else None
+        if not isinstance(it, dict):
+            continue
+        val, typ, ity = it.get("journal_id"), (it.get("type") or "").upper(), (it.get("issn_type") or "").lower()
+        n = normalize_issn(val) if (val and typ != "JID") else None
         if n:
-            (printed if "PRINT" in typ else other).append(n)
+            (printed if ity == "print" else other).append(n)
         elif val and (typ == "JID" or jid is None):
             jid = val
     issn = list(dict.fromkeys(printed + other))
-    jt = _lang_texts(rec.get("journal_title_name_list"), keys=("journal_title_name", "name", "text", "title"))
-    jt_ja = [t for l, t in jt if l == "ja"]
+    names_j = [it for it in (rec.get("journal_title_name_list") or []) if isinstance(it, dict)]
+    full = [it for it in names_j if (it.get("type") or "full") == "full"] or names_j
+    jt_ja = [it["journal_title_name"] for it in full if it.get("lang") == "ja" and it.get("journal_title_name")]
+    jt_any = [it["journal_title_name"] for it in full if it.get("journal_title_name")]
     w["issn"] = issn
     w["jid"] = jid
-    w["journal_title"] = (jt_ja or [t for _, t in jt] or [None])[0]
+    w["journal_title"] = (jt_ja or jt_any or [None])[0]
+    w["journal_title_en"] = next((it["journal_title_name"] for it in full if it.get("lang") == "en"), None)
     is_ja = ct == "JA"  # 対応表: volume/issue/page は JA のみ
     w["biblio"] = {"volume": (rec.get("volume") or None) if is_ja else None,
                    "issue": (rec.get("issue") or None) if is_ja else None,
                    "first_page": (rec.get("first_page") or None) if is_ja else None,
                    "last_page": (rec.get("last_page") or None) if is_ja else None}
     pubs = _lang_texts(rec.get("publisher_list"), keys=("publisher_name", "name", "text"))
-    w["publisher"] = (pubs[0][1] if pubs else None)
+    pe = [t for l, t in pubs if l == "en"] or [t for _, t in pubs]
+    w["publisher"] = pe[0] if pe else None
 
     pdf = None
     for r in rec.get("relation_list") or []:
         if isinstance(r, dict) and r.get("relation") == "fullTextPdf":
             pdf = r.get("content")
     w["primary_location"] = {
-        "source": {"display_name": w["journal_title"], "issn": w["issn"], "type": "journal"},
+        "source": {"display_name": w["journal_title_en"] or w["journal_title"], "issn": w["issn"], "type": "journal"},
         "landing_page_url": rec.get("url"), "pdf_url": pdf, "version": None}
     w["open_access"] = {"is_oa": None, "access_right": None}
     for k in rec.get("keyword_list") or []:
         if isinstance(k, dict) and k.get("keyword"):
-            w["keywords"].append({"keyword": k["keyword"], "lang": k.get("lang")})
-    w["has_abstract_in_source"] = False  # JaLC REST v2 のJAには抄録項目なし（2026-10時点の確認）
+            w["keywords"].append({"keyword": clean_text(k["keyword"]), "lang": k.get("lang")})
+    w["references_count"] = len(rec.get("citation_list") or [])
+    w["has_abstract_in_source"] = False  # JaLC REST v2 のJAには抄録項目なし（実データ20件で確認）
     w["site_id"] = rec.get("siteId")
     w["journal_key"] = journal_key(w["issn"], jid, rec.get("siteId"))
     return w

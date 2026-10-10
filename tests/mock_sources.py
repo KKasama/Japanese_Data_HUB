@@ -134,25 +134,33 @@ class MockIRDB:
 
 
 def jalc_data(doi, site, issn, jid, title, shape="list"):
+    """実データ(J-STAGE 10.11162, 2026-10-10確認)と同じ構造のモック。"""
     pfx = doi.split("/")[0]
-    titles = ([{"lang": "ja", "title": title}, {"lang": "en", "title": "EN " + title}] if shape == "list"
-              else {"ja": title, "en": "EN " + title})
-    return {"siteId": site, "content_type": "JA", "doi": doi, "url": "https://doi.org/" + doi, "ra": "JaLC",
-            "prefix": pfx, "site_name": "J-STAGE" if "JSTAGE" in site else "他",
-            "publisher_list": [{"lang": "ja", "publisher_name": "テスト学会"}],
-            "title_list": titles,
-            "creator_list": [{"sequence": 1, "type": "person",
-                              "names": [{"lang": "ja", "name": "山田 太郎"}],
-                              "affiliations": [{"lang": "ja", "affiliation_name": "テスト大学A"}]}],
-            "publication_date": "2026-03-20", "updated_date": "2026-03-19", "content_language": "ja",
+    return {"siteId": site, "content_type": "JA", "article_type": "pub", "doi": doi,
+            "url": "https://doi.org/" + doi, "ra": "JaLC", "prefix": pfx,
+            "site_name": "J-STAGE" if "JSTAGE" in site else "他",
+            "publisher_list": [{"lang": "en", "publisher_name": "Test Society"},
+                               {"lang": "ja", "publisher_name": "テスト学会"}],
+            "title_list": [{"lang": "ja", "title": title}, {"lang": "en", "title": "EN " + title}],
+            "creator_list": [{"sequence": "1", "type": "person",
+                              "names": [{"lang": "ja", "last_name": "山田", "first_name": "太郎"},
+                                        {"lang": "en", "last_name": "Yamada", "first_name": "Taro"}],
+                              "affiliation_list": [{"sequence": "1", "affiliation_name_list": [
+                                  {"lang": "ja", "affiliation_name": "テスト大学A"},
+                                  {"lang": "en", "affiliation_name": "Test University A"}]}]}],
+            "publication_date": {"publication_year": "2026", "publication_month": "3", "publication_day": "20"},
+            "date": "2026-03-20", "updated_date": "2026-03-19", "content_language": "ja",
             "relation_list": [{"type": "URL", "relation": "fullTextPdf", "content": "https://example.org/%s.pdf" % jid}],
-            "journal_id_list": [{"type": "ISSN", "journal_id": issn[0], "issn_type": "print"},
-                                {"type": "ISSN", "journal_id": issn[1], "issn_type": "online"},
+            "journal_id_list": [{"type": "ISSN", "issn_type": "print", "journal_id": issn[0]},
+                                {"type": "ISSN", "issn_type": "online", "journal_id": issn[1]},
                                 {"type": "JID", "journal_id": jid}],
-            "journal_title_name_list": [{"lang": "ja", "journal_title_name": "テスト誌" + jid}],
-            "volume": "16", "issue": "3", "first_page": "87", "last_page": "95",
+            "journal_title_name_list": [{"lang": "ja", "type": "full", "journal_title_name": "テスト誌" + jid},
+                                        {"lang": "en", "type": "full", "journal_title_name": "Test Journal " + jid},
+                                        {"lang": "en", "type": "abbreviation", "journal_title_name": "TJ"}],
+            "volume": "16", "issue": "3", "first_page": "87", "last_page": "95", "article_number": "25G1201",
+            "journal_classification": "01", "recorded_year": "2010-2014",
             "keyword_list": [{"keyword": "実験操作", "sequence": "1", "lang": "ja"}],
-            "citation_list": []}
+            "citation_list": [{"sequence": "1", "original_text": "参考文献1"}]}
 
 
 class MockJaLC:

@@ -94,11 +94,11 @@ def records_from_jalc_chunk(raw, source, raw_key):
         yield r
 
 
-def ingest(store, conn, source, kind, native_prefix=None, id_regex=None, now=None, log=print):
+def ingest(store, conn, source, kind, native_prefix=None, id_regex=None, now=None, log=print, reprocess=False):
     """kind: 'oai'（IRDB等のOAI-PMH XML） | 'jalc'（REST JSONL）。"""
     from .classify import DEFAULT_ID_REGEX
     id_regex = id_regex or DEFAULT_ID_REGEX
-    done = {r[0] for r in conn.execute("SELECT raw_key FROM ingested")}
+    done = set() if reprocess else {r[0] for r in conn.execute("SELECT raw_key FROM ingested")}
     stats = {"new": 0, "changed": 0, "same": 0, "pages": 0, "bad_pages": 0}
     for key in store.list("raw/%s/" % source):
         if key in done:

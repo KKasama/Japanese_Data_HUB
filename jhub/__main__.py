@@ -29,6 +29,7 @@ def main(argv=None):
     ap.add_argument("arg", nargs="?")
     ap.add_argument("--config", default="config.json")
     ap.add_argument("--full", action="store_true")
+    ap.add_argument("--reprocess", action="store_true", help="ingest: 取り込み済みの生データも整形し直す")
     ap.add_argument("--site")
     ap.add_argument("--prefix", action="append")
     ap.add_argument("--max-dois", type=int)
@@ -56,8 +57,9 @@ def main(argv=None):
                      full=a.full, max_dois=a.max_dois)
     elif a.command == "ingest":
         conn = connect(cfg["db"])
-        ingest(store, conn, "irdb", "oai", irdb.get("metadata_prefix", "jpcoar_2.0"), irdb.get("id_regex"))
-        ingest(store, conn, "jalc", "jalc")
+        ingest(store, conn, "irdb", "oai", irdb.get("metadata_prefix", "jpcoar_2.0"), irdb.get("id_regex"),
+               reprocess=a.reprocess)
+        ingest(store, conn, "jalc", "jalc", reprocess=a.reprocess)
     elif a.command == "load-institutions":
         print(load_institutions_csv(connect(cfg["db"]), a.arg), "件")
     elif a.command == "serve":

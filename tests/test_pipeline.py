@@ -273,9 +273,13 @@ class TestJaLCFlow(Base):
         self.assertEqual(w["issn"], ["1884-4375", "2186-3725"])
         self.assertEqual(w["jid"], "daikankyo")
         self.assertEqual(w["title"][:2], "論文")
-        self.assertTrue(w["display_name"].startswith("EN "))  # 英語優先
-        self.assertEqual(w["authorships"][0]["author"]["display_name"], "山田 太郎")
-        self.assertEqual(w["authorships"][0]["raw_affiliation_strings"], ["テスト大学A"])
+        self.assertTrue(w["display_name"].startswith("EN "))
+        self.assertEqual(w["journal_title"], "テスト誌daikankyo")  # 英語優先
+        self.assertEqual(w["authorships"][0]["author"]["display_name"], "Taro Yamada")  # 英語優先: 名 姓
+        self.assertIn("山田 太郎", [n["text"] for n in w["authorships"][0]["names"]])  # 日本語: 姓 名
+        self.assertEqual(w["publication_date"], "2026-03-20")
+        self.assertEqual(w["references_count"], 1)
+        self.assertEqual(w["authorships"][0]["raw_affiliation_strings"], ["テスト大学A", "Test University A"])
         self.assertEqual(w["primary_location"]["pdf_url"], "https://example.org/daikankyo.pdf")
         self.assertFalse(w["has_abstract_in_source"])
         code, d = hub.api("/api/works", {"doi_prefix": "10.11163"})
@@ -301,6 +305,43 @@ class TestJaLCFlow(Base):
         harvest_jalc(self.client, self.store, "jalc", site_id="SI/JST.JSTAGE", now="2026-10-11T00:00:00Z", log=noop)
         self.assertTrue(any("from=2026-10-10" in u for u in self.src.requests[n:]))
 
+
+
+class CleanTextTest(unittest.TestCase):
+    def test_clean_text_strips_tags_and_entities(self):
+        from jhub.normalize import clean_text
+        self.assertEqual(clean_text("UV/O<sub>3</sub>処理装置"), "UV/O3処理装置")
+        self.assertEqual(clean_text('on &quot;Structure-to-Hazards&quot; Image'), 'on "Structure-to-Hazards" Image')
+        self.assertEqual(clean_text("<i>Americamysis bahia</i>  test "), "Americamysis bahia test")
+
+    def test_jalc_title_cleaned_and_lang_guessed(self):
+        from jhub.normalize import normalize_jalc
+        w = normalize_jalc({"doi": "10.1/x", "title_list": [{"lang": "en", "title": "A <i>b</i> &amp; c"}, {"title": "日本語の題"}]})
+        self.assertEqual(w["display_name"], "A b & c")
+        self.assertEqual(w["titles"][1]["lang"], "ja")
+
+
+class ReprocessTest(unittest.TestCase):
+    def test_reprocess_renormalizes_ingested_pages(self):
+        import tempfile
+        from jhub.db import connect
+        from jhub.harvest import harvest_jalc
+        from jhub.ingest import ingest
+        from jhub.jalc_client import JaLCClient
+        from jhub.store import LocalStore
+        from mock_sources import MockJaLC
+        tmp = tempfile.mkdtemp()
+        jalc = MockJaLC()
+        try:
+            store, conn = LocalStore(tmp + "/s"), connect(tmp + "/h.sqlite")
+            harvest_jalc(JaLCClient(jalc.url, max_rps=0), store, "jalc")
+            self.assertGreater(ingest(store, conn, "jalc", "jalc", log=lambda *a: None)["new"], 0)
+            self.assertEqual(ingest(store, conn, "jalc", "jalc", log=lambda *a: None)["pages"], 0)
+            st = ingest(store, conn, "jalc", "jalc", reprocess=True, log=lambda *a: None)
+            self.assertGreater(st["pages"], 0)
+            self.assertEqual(st["new"], 0)
+        finally:
+            jalc.stop()
 
 if __name__ == "__main__":
     unittest.main()
