@@ -3,7 +3,7 @@ import json
 import xml.etree.ElementTree as ET
 
 from . import normalize as N
-from .classify import institution_code, provenance_institution_name
+from .classify import DEFAULT_ID_REGEX as _IDRX, institution_code, provenance_institution_name
 from .db import upsert_record
 from .oai_client import q
 from .util import kid, kids, ln, slug, text, utc_now
@@ -90,6 +90,14 @@ def records_from_jalc_chunk(raw, source, raw_key):
              "journal_key": w["journal_key"], "journal_title": w["journal_title"],
              "doi": w["doi"], "doi_prefix": w["doi_prefix"], "site_id": data.get("siteId"),
              "native_prefix": None, "native_xml": None, "provenance": {}, "work": w, "raw_key": raw_key}
+        # 機関リポジトリ由来(SI/NII.JAIRO)のJaLCレコードは、IRDBのOAI識別子を持つ。
+        # そこから機関コードを得て、IRDBとの名寄せ・機関別の振り分けに使う。
+        irdb_id = next((a.get("id") for a in w["ids"].get("alternate", [])
+                        if (a.get("type") or "").upper() == "OAIPMH" and str(a.get("id") or "").startswith("oai:")), None)
+        if irdb_id:
+            code, _how, _mm = institution_code(irdb_id, [], _IDRX)
+            if code:
+                r["institution_code"], r["institution_how"] = code, "jalc_alternate_id"
         r["setspecs"] = _sets_for(r)
         yield r
 

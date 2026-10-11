@@ -439,3 +439,24 @@ class UITest(unittest.TestCase):
             srv.shutdown()
         finally:
             jalc.stop()
+
+
+class JaLCRepositoryTest(unittest.TestCase):
+    """機関リポジトリ由来のJaLCレコード（SI/NII.JAIRO）。実データ(10.15083/00004131, 2026-10-11)の構造。"""
+
+    def test_institution_from_irdb_identifier(self):
+        import json as _j
+        from jhub.ingest import records_from_jalc_chunk
+        data = {"siteId": "SI/NII.JAIRO", "content_type": "BK", "doi": "10.15083/00004131", "prefix": "10.15083",
+                "site_name": "機関リポジトリ／Institutional Repository",
+                "publisher_list": [{"publisher_name": "University of Tokyo (東京大学)", "location": "JPN"}],
+                "title_list": [{"title": "Development of a New RF Accelerating Cavity"}],
+                "creator_list": [{"sequence": "1", "type": "person", "names": [{"last_name": "Morita", "first_name": "Yuichi"}]}],
+                "publication_date": {"publication_year": "2011", "publication_month": "03", "publication_day": "24"},
+                "alternate_identifier_list": [{"alternate_identifier": "oai:irdb.nii.ac.jp:00926:0001750744", "type": "OAIPMH"}],
+                "content_language": "en", "updated_date": "2026-07-24", "book_classification": "03"}
+        raw = (_j.dumps({"data": data}) + "\n").encode()
+        r = next(records_from_jalc_chunk(raw, "jalc", "k"))
+        self.assertEqual(r["institution_code"], "00926")
+        self.assertIn("inst:00926", r["setspecs"])
+        self.assertEqual(r["institution_how"], "jalc_alternate_id")
