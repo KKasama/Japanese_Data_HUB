@@ -54,7 +54,7 @@ def harvest_oai(client, store, source, metadata_prefix, set_spec=None, full=Fals
 
 
 def harvest_jalc(client, store, source="jalc", prefixes=None, site_id=None, from_=None,
-                 until=None, full=False, max_dois=None, chunk=500, now=None, log=print):
+                 until=None, full=False, max_dois=None, per_prefix=None, chunk=500, now=None, log=print):
     """JaLC REST API: prefix → doilist → 各DOIのv2書誌データを JSONL にまとめて保存。
 
     prefixes を省略すると /prefixes（ra=JaLC）から取得し、site_id（例: SI/JST.JSTAGE）で絞れる。
@@ -72,15 +72,19 @@ def harvest_jalc(client, store, source="jalc", prefixes=None, site_id=None, from
     fetched = 0
     for pfx in prefixes:
         last = None if full else (from_ or pstate.get(pfx))
-        buf, n_chunk = [], 0
+        buf, n_chunk, n_pfx, cut = [], 0, 0, False
         for doi, upd, sid in client.doilist(pfx, from_=last, until=until):
             if max_dois and fetched >= max_dois:
+                break
+            if per_prefix and n_pfx >= per_prefix:   # 試験用: 1プレフィックスあたりの上限（多様なジャーナルを少数ずつ）
+                cut = True
                 break
             raw = client.doi_record(doi)
             if raw is None:
                 continue
             buf.append(raw.decode("utf-8").strip().replace("\n", " "))
             fetched += 1
+            n_pfx += 1
             if len(buf) >= chunk:
                 store.put("raw/%s/%s/%s/%05d.jsonl" % (source, run_id, pfx, n_chunk),
                           ("\n".join(buf) + "\n").encode("utf-8"))
@@ -88,7 +92,7 @@ def harvest_jalc(client, store, source="jalc", prefixes=None, site_id=None, from
         if buf:
             store.put("raw/%s/%s/%s/%05d.jsonl" % (source, run_id, pfx, n_chunk),
                       ("\n".join(buf) + "\n").encode("utf-8"))
-        if not (max_dois and fetched >= max_dois):
+        if not cut and not (max_dois and fetched >= max_dois):
             pstate[pfx] = day  # doilist の from は日単位。同日の再取得は冪等
         st = {"prefixes": pstate, "last_run_id": run_id}
         _save_state(store, skey, st)

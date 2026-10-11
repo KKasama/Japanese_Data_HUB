@@ -1,0 +1,222 @@
+[ {
+  "doi" : "10.11162/daikankyo.13G1001",
+  "content_type" : "ジャーナルアーティクル",
+  "titles" : [ {
+    "language" : "ja",
+    "title" : "酸化オスミウム（Ⅷ）を含む電子顕微鏡試料作製廃液の再生に関する研究"
+  }, {
+    "language" : "en",
+    "title" : "Method for regeneration osmium (Ⅷ) oxide from a spent solution of osmium oxide used for sample preparation for electron microscopy"
+  } ],
+  "journal_names" : [ {
+    "language" : "ja",
+    "journal_name" : "環境と安全"
+  }, {
+    "language" : "en",
+    "journal_name" : "Journal of Environment and Safety"
+  } ],
+  "creators" : [ {
+    "sequence" : "1",
+    "language" : "ja",
+    "given" : "一成",
+    "family" : "鈴木"
+  }, {
+    "sequence" : "2",
+    "language" : "ja",
+    "given" : "祥悟",
+    "family" : "村中"
+  }, {
+    "sequence" : "3",
+    "language" : "ja",
+    "given" : "雄一",
+    "family" : "宮澤"
+  }, {
+    "sequence" : "4",
+    "language" : "ja",
+    "given" : "あゆみ",
+    "family" : "神谷"
+  }, {
+    "sequence" : "5",
+    "language" : "ja",
+    "given" : "忠蔵",
+    "family" : "藤本"
+  }, {
+    "sequence" : "6",
+    "language" : "ja",
+    "given" : "勲",
+    "family" : "太田"
+  }, {
+    "sequence" : "7",
+    "language" : "ja",
+    "given" : "聖孝",
+    "family" : "伊藤"
+  }, {
+    "sequence" : "8",
+    "language" : "ja",
+    "given" : "訓章",
+    "family" : "坂田"
+  }, {
+    "sequence" : "1",
+    "language" : "en",
+    "given" : "Kazushige",
+    "family" : "Suzuki"
+  }, {
+    "sequence" : "2",
+    "language" : "en",
+    "given" : "Yoshinori",
+    "family" : "Muranaka"
+  }, {
+    "sequence" : "3",
+    "language" : "en",
+    "given" : "Yuichi",
+    "family" : "Miyazawa"
+  }, {
+    "sequence" : "4",
+    "language" : "en",
+    "given" : "Ayumi",
+    "family" : "Kamiya"
+  }, {
+    "sequence" : "5",
+    "language" : "en",
+    "given" : "Chuzo",
+    "family" : "Fujimoto"
+  }, {
+    "sequence" : "6",
+    "language" : "en",
+    "given" : "Isao",
+    "family" : "Ohta"
+  }, {
+    "sequence" : "7",
+    "language" : "en",
+    "given" : "Kiyotaka",
+    "family" : "Itoh"
+  }, {
+    "sequence" : "8",
+    "language" : "en",
+    "given" : "Kuniaki",
+    "family" : "Sakata"
+  } ],
+  "creators_affiliation" : [ {
+    "sequence" : "1",
+    "affiliation_sequence" : "1",
+    "affiliations" : [ {
+      "language" : "ja",
+      "affiliation" : "浜松医科大学医療廃棄物処理センター"
+    }, {
+      "language" : "en",
+      "affiliation" : "Center for Medical Waste Management, Hamamatsu University School of Medicine"
+    } ]
+  }, {
+    "sequence" : "2",
+    "affiliation_sequence" : "1",
+    "affiliations" : [ {
+      "language" : "ja",
+      "affiliation" : "浜松医科大学実験実習機器センター超微形態共同実験室"
+    }, {
+      "language" : "en",
+      "affiliation" : "Ultrastructural Morphology Laboratory, Research Equipment Center, Hamamatsu University School of Medicine"
+    } ]
+  }, {
+    "sequence" : "3",
+    "affiliation_sequence" : "1",
+    "affiliations" : [ {
+      "language" : "ja",
+      "affiliation" : "浜松医科大学医療廃棄物処理センター"
+    }, {
+      "language" : "en",
+      "affiliation" : "Center for Medical Waste Management, Hamamatsu University School of Medicine"
+    } ]
+  }, {
+    "sequence" : "4",
+    "affiliation_sequence" : "1",
+    "affiliations" : [ {
+      "language" : "ja",
+      "affiliation" : "浜松医科大学医療廃棄物処理センター"
+    }, {
+      "language" : "en",
+      "affiliation" : "Center for Medical Waste Management, Hamamatsu University School of Medicine"
+    } ]
+  }, {
+    "sequence" : "5",
+    "affiliation_sequence" : "1",
+    "affiliations" : [ {
+      "language" : "ja",
+      "affiliation" : "浜松医科大学医療廃棄物処理センター"
+    }, {
+      "language" : "en",
+      "affiliation" : "Center for Medical Waste Management, Hamamatsu University School of Medicine"
+    } ]
+  }, {
+    "sequence" : "5",
+    "affiliation_sequence" : "2",
+    "affiliations" : [ {
+      "language" : "ja",
+      "affiliation" : "浜松医科大学医学部化学教室"
+    }, {
+      "language" : "en",
+      "affiliation" : "Department of Chemistry, Hamamatsu University School of Medicine"
+    } ]
+  }, {
+    "sequence" : "6",
+    "affiliation_sequence" : "1",
+    "affiliations" : [ {
+      "language" : "ja",
+      "affiliation" : "浜松医科大学実験実習機器センター超微形態共同実験室"
+    }, {
+      "language" : "en",
+      "affiliation" : "Ultrastructural Morphology Laboratory, Research Equipment Center, Hamamatsu University School of Medicine"
+    } ]
+  }, {
+    "sequence" : "7",
+    "affiliation_sequence" : "1",
+    "affiliations" : [ {
+      "language" : "ja",
+      "affiliation" : "株式会社ハマネツ"
+    }, {
+      "language" : "en",
+      "affiliation" : "Hamanetsu Co., Ltd."
+    } ]
+  }, {
+    "sequence" : "8",
+    "affiliation_sequence" : "1",
+    "affiliations" : [ {
+      "language" : "ja",
+      "affiliation" : "株式会社ハマネツ"
+    }, {
+      "language" : "en",
+      "affiliation" : "Hamanetsu Co., Ltd."
+    } ]
+  } ],
+  "published" : "2014",
+  "publishers" : [ {
+    "language" : "ja",
+    "publisher" : "大学等環境安全協議会"
+  }, {
+    "language" : "en",
+    "publisher" : "Academic Consociation of Environmental Safety and Waste Management, Japan"
+  } ],
+  "language" : "ja",
+  "volume" : "5",
+  "issue" : "1",
+  "first_page" : "3",
+  "last_page" : "8",
+  "paper_number" : "13G1001",
+  "site_name" : "J-STAGE",
+  "ra_name" : "JaLC",
+  "issns" : [ {
+    "issn_type" : "print",
+    "issn_cd" : "1884-4375"
+  }, {
+    "issn_type" : "online",
+    "issn_cd" : "2186-3725"
+  } ],
+  "third_party_use" : "不可",
+  "summaries" : [ {
+    "language" : "-",
+    "summary" : "-"
+  }, {
+    "language" : "-",
+    "summary" : "-"
+  } ],
+  "update_date" : "20141209"
+} ]

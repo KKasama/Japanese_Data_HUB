@@ -486,3 +486,222 @@ class JournalExportTest(unittest.TestCase):
             self.assertEqual(d["journals"][0]["records"], 2)
         finally:
             jalc.stop()
+
+
+class JaLCScreenFormatTest(unittest.TestCase):
+    """JaLC検索画面の「JSONで保存」形式（実ファイル）の取り込み。"""
+    SAMPLE = os.path.join(os.path.dirname(__file__), "data", "jalc_screen_sample.json")
+
+    def test_convert_and_ingest(self):
+        import shutil
+        raw = open(self.SAMPLE, "rb").read()
+        d = tempfile.mkdtemp()
+        try:
+            store = LocalStore(os.path.join(d, "s"))
+            store.put("raw/jalc/20261011T000000Z/screen/jalc_x.json", raw)
+            conn = connect(os.path.join(d, "h.sqlite"))
+            self.assertEqual(ingest(store, conn, "jalc", "jalc", log=lambda *a: None)["new"], 1)
+            hub = Hub(os.path.join(d, "h.sqlite"), store=store)
+            code, r = hub.api("/api/works", {"q": "13g1001"})
+            w = r["results"][0]["work"]
+            self.assertEqual(w["type"], "article")
+            self.assertEqual(w["site_id"], "SI/JST.JSTAGE")
+            self.assertEqual(w["issn"], ["1884-4375", "2186-3725"])
+            self.assertEqual(w["journal_title_en"], "Journal of Environment and Safety")
+            self.assertEqual(w["publication_year"], 2014)
+            self.assertEqual(w["biblio"]["first_page"], "3")
+            self.assertEqual(len(w["authorships"]), 8)
+            self.assertEqual(w["authorships"][0]["author"]["display_name"], "Kazushige Suzuki")
+            self.assertIn("鈴木 一成", [n["text"] for n in w["authorships"][0]["names"]])
+            # 所属は sequence で著者に対応（5番目の著者は2つ）
+            self.assertEqual(len(w["authorships"][4]["raw_affiliation_strings"]), 4)
+            self.assertEqual(w["third_party_use"], "不可")
+            self.assertFalse(w["has_abstract_in_source"])
+            code, raw_r = hub.api("/api/raw/" + "doi%3A10.11162%2Fdaikankyo.13g1001".replace("%3A", ":").replace("%2F", "/"), {})
+            self.assertEqual(code, 200)
+            self.assertEqual(raw_r["raw"]["doi"], "10.11162/daikankyo.13G1001")
+        finally:
+            shutil.rmtree(d)
+
+    def test_rest_record_not_overwritten(self):
+        import shutil, json as _j
+        d = tempfile.mkdtemp()
+        try:
+            store = LocalStore(os.path.join(d, "s"))
+            rest = {"data": {"doi": "10.11162/daikankyo.13G1001", "siteId": "SI/JST.JSTAGE", "content_type": "JA",
+                             "title_list": [{"lang": "ja", "title": "REST版"}]}}
+            store.put("raw/jalc/20261010T000000Z/10.11162/00000.jsonl", (_j.dumps(rest) + "\n").encode())
+            store.put("raw/jalc/20261011T000000Z/screen/x.json", open(self.SAMPLE, "rb").read())
+            conn = connect(os.path.join(d, "h.sqlite"))
+            ingest(store, conn, "jalc", "jalc", log=lambda *a: None)
+            t = conn.execute("SELECT work_json FROM records").fetchone()[0]
+            self.assertIn("REST版", t)
+        finally:
+            shutil.rmtree(d)
+
+
+class PerPrefixTest(TestJaLCFlow):
+    def test_per_prefix_limits_each_prefix_and_keeps_incremental_state(self):
+        r = harvest_jalc(self.client, self.store, "jalc", site_id="SI/JST.JSTAGE", per_prefix=1,
+                         now="2026-10-10T00:00:00Z", log=noop)
+        self.assertEqual(r["dois"], 2)   # J-STAGEの2プレフィックスから1件ずつ
+        st = json.loads(self.store.get("state/jalc.json").decode("utf-8"))
+        # 途中で打ち切ったプレフィックスは「完了」にしない（次回の差分取得で残りを取れる）
+        self.assertIn("10.11163", st["prefixes"])
+        self.assertNotIn("10.11162", st["prefixes"])
+
+
+class TopicsHandoffTest(unittest.TestCase):
+    """分野の自動推定: 入力の書き出し → ツールの出力を取り込み → APIに別枠で表示。"""
+
+    def test_roundtrip(self):
+        import shutil
+        from jhub.topics import export_topics_input, import_topics
+        d = tempfile.mkdtemp()
+        try:
+            store = LocalStore(os.path.join(d, "s"))
+            store.put("raw/jalc/20261011T000000Z/screen/x.json", open(JaLCScreenFormatTest.SAMPLE, "rb").read())
+            db = os.path.join(d, "h.sqlite")
+            conn = connect(db)
+            ingest(store, conn, "jalc", "jalc", log=lambda *a: None)
+            inp = os.path.join(d, "in.jsonl")
+            self.assertEqual(export_topics_input(db, inp), 1)
+            rec = json.loads(open(inp, encoding="utf-8").readline())
+            self.assertTrue(rec["id"].startswith("doi:10.11162/"))
+            self.assertIn("オスミウム", rec["title"])
+            out = os.path.join(d, "out.jsonl")
+            top = {"id": "https://openalex.org/T1", "display_name": "Environmental Chemistry", "score": 0.81}
+            with open(out, "w", encoding="utf-8") as f:
+                f.write(json.dumps({"work_id": rec["id"], "primary_topic": top, "topics": [top], "method": "ensemble",
+                                    "emb_score": 0.8, "bm25_score": 0.3}) + "\n")
+                f.write(json.dumps({"work_id": "doi:10.1/none", "topics": [top]}) + "\n")
+                f.write(json.dumps({"work_id": rec["id"].replace("1001", "9999")}) + "\n")
+            self.assertEqual(import_topics(db, out, version="t1"), {"saved": 1, "unknown": 2, "empty": 0})
+            self.assertEqual(export_topics_input(db, inp), 0)   # 推定済みは既定で除く
+            self.assertEqual(export_topics_input(db, inp, only_missing=False), 1)
+            hub = Hub(db)
+            code, r = hub.api("/api/works/" + rec["id"], {})
+            self.assertEqual(r["auto_topics"]["primary_topic"]["display_name"], "Environmental Chemistry")
+            self.assertEqual(r["auto_topics"]["version"], "t1")
+            self.assertNotIn("topics", r["work"])        # 整形結果とは別枠
+            # 再取り込み(--reprocess)をしても推定は消えない
+            ingest(store, conn, "jalc", "jalc", reprocess=True, log=lambda *a: None)
+            code, r = hub.api("/api/works", {"q": "13g1001"})
+            self.assertIn("auto_topics", r["results"][0])
+        finally:
+            shutil.rmtree(d)
+
+
+class RepositoryListTest(unittest.TestCase):
+    def test_names_from_prefix_match(self):
+        import shutil
+        from jhub.institutions import load_repositorylist
+        d = tempfile.mkdtemp()
+        try:
+            db = os.path.join(d, "h.sqlite")
+            c = connect(db)
+            for i, (code, pfx) in enumerate([("00937", "10.18880"), ("00937", "10.18880"), ("00111", "10.99999"), ("00222", "10.15015")]):
+                c.execute("INSERT INTO records(identifier,source,hub_datestamp,institution_code,doi_prefix) VALUES(?,?,?,?,?)",
+                          ("doi:x%d" % i, "jalc", "2026-10-11T00:00:00Z", code, pfx))
+            c.commit()
+            csvp = os.path.join(d, "list.csv")
+            with open(csvp, "w", encoding="utf-8-sig", newline="") as f:
+                f.write("№,機関名,リポジトリ名,リポジトリURL,JaLC DOI Prefix,Crossref DOI Prefix,DataCite Prefix\n"
+                        "1,横浜国立大学,横浜国立大学学術情報リポジトリ,https://ynu.repo.nii.ac.jp,10.18880,,\n"
+                        "2,横浜市立大学,横浜市立大学学術機関リポジトリ,https://ycu.repo.nii.ac.jp,10.15015,,\n")
+            r = load_repositorylist(db, csvp)
+            self.assertEqual(r["matched"], 2)
+            self.assertEqual(r["unmatched"], ["00111"])
+            names = {x["code"]: x["name_ja"] for x in connect(db).execute("SELECT * FROM institutions")}
+            self.assertEqual(names, {"00937": "横浜国立大学", "00222": "横浜市立大学"})
+            code, d2 = Hub(db).api("/api/institutions", {})
+            self.assertEqual(d2["institutions"][-1]["name_ja"] if d2["institutions"][-1]["code"] == "00937" else
+                             [i for i in d2["institutions"] if i["code"] == "00937"][0]["name_ja"], "横浜国立大学")
+        finally:
+            shutil.rmtree(d)
+
+
+class AbstractPolicyTest(unittest.TestCase):
+    """抄録の出力ポリシー（IRDB=出力 / JaLC=既定は出さない・設定で切替）"""
+
+    JALC = {"doi": "10.99999/abs.1", "title_list": [{"lang": "ja", "title": "題"}],
+            "description_list": [{"description": "<p>これは&quot;抄録&quot;です</p>", "type": "Abstract", "lang": "ja"}],
+            "third_party_use": "可"}
+
+    def _store_jalc(self, d, data):
+        store = LocalStore(os.path.join(d, "store"))
+        store.put("raw/jalc/20261011T000000Z/10.99999/00001.jsonl",
+                  (json.dumps({"data": data}, ensure_ascii=False) + "\n").encode("utf-8"))
+        return store
+
+    def _work(self, conn):
+        return json.loads(conn.execute("SELECT work_json FROM records").fetchone()[0])
+
+    def test_jalc_default_off_then_switch_by_reprocess(self):
+        from jhub.policy import resolve_policy
+        d = tempfile.mkdtemp()
+        try:
+            store = self._store_jalc(d, self.JALC)
+            conn = connect(os.path.join(d, "h.sqlite"))
+            ingest(store, conn, "jalc", "jalc", log=noop)
+            w = self._work(conn)
+            self.assertNotIn("abstracts", w)
+            self.assertNotIn("_abstracts", w)
+            self.assertTrue(w["has_abstract_in_source"])
+            self.assertEqual(w["abstract_status"], "withheld_by_policy")
+            # include に切替 → 再処理で出力される（HTML・文字参照は除去）
+            ingest(store, conn, "jalc", "jalc", reprocess=True, log=noop, abstracts={"jalc": "include"})
+            w = self._work(conn)
+            self.assertEqual(w["abstract_status"], "included")
+            self.assertEqual(w["abstracts"], [{"lang": "ja", "text": 'これは"抄録"です'}])
+            # 元に戻す
+            ingest(store, conn, "jalc", "jalc", reprocess=True, log=noop, abstracts={"jalc": "off"})
+            self.assertNotIn("abstracts", self._work(conn))
+            with self.assertRaises(ValueError):
+                resolve_policy({"jalc": "yes"})
+        finally:
+            shutil.rmtree(d)
+
+    def test_jalc_permitted_only(self):
+        d = tempfile.mkdtemp()
+        try:
+            for tpu, want in (("可", "included"), ("不可", "not_permitted"), (None, "not_permitted")):
+                data = dict(self.JALC)
+                data["third_party_use"] = tpu
+                store = self._store_jalc(d, data)
+                conn = connect(os.path.join(d, "h_%s.sqlite" % want))
+                ingest(store, conn, "jalc", "jalc", log=noop, abstracts={"jalc": "permitted_only"})
+                self.assertEqual(self._work(conn)["abstract_status"], want)
+        finally:
+            shutil.rmtree(d)
+
+    def test_no_abstract_status_none(self):
+        d = tempfile.mkdtemp()
+        try:
+            store = self._store_jalc(d, {"doi": "10.99999/abs.2", "title_list": [{"lang": "ja", "title": "題"}]})
+            conn = connect(os.path.join(d, "h.sqlite"))
+            ingest(store, conn, "jalc", "jalc", log=noop, abstracts={"jalc": "include"})
+            w = self._work(conn)
+            self.assertEqual(w["abstract_status"], "none")
+            self.assertNotIn("abstracts", w)
+        finally:
+            shutil.rmtree(d)
+
+    def test_irdb_abstract_included_by_default(self):
+        xml = ('<jpcoar:jpcoar xmlns:jpcoar="https://github.com/JPCOAR/schema/blob/master/2.0/" '
+               'xmlns:datacite="http://datacite.org/schema/kernel-4" xmlns:dc="http://purl.org/dc/elements/1.1/" '
+               'xmlns:xml="http://www.w3.org/XML/1998/namespace">'
+               '<dc:title xml:lang="ja">題</dc:title>'
+               '<datacite:description descriptionType="Abstract" xml:lang="ja">要旨です</datacite:description>'
+               '<datacite:description descriptionType="Abstract" xml:lang="en">An abstract.</datacite:description>'
+               '<datacite:description descriptionType="Other">注記</datacite:description></jpcoar:jpcoar>')
+        from jhub.policy import apply_abstract_policy, DEFAULT_POLICY
+        w = N.normalize_jpcoar(ET.fromstring(xml), "oai:x:1")
+        self.assertTrue(w["has_abstract_in_source"])
+        apply_abstract_policy(w, "irdb", DEFAULT_POLICY)
+        self.assertEqual([a["lang"] for a in w["abstracts"]], ["ja", "en"])
+        self.assertEqual(w["abstract_status"], "included")
+        w2 = N.normalize_jpcoar(ET.fromstring(xml), "oai:x:1")
+        apply_abstract_policy(w2, "irdb", {"irdb": "off"})
+        self.assertNotIn("abstracts", w2)
+        self.assertEqual(w2["abstract_status"], "withheld_by_policy")

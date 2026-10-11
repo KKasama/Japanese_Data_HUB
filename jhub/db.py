@@ -37,6 +37,13 @@ CREATE TABLE IF NOT EXISTS institutions(
   code TEXT PRIMARY KEY, name_ja TEXT, name_en TEXT, ror TEXT, url TEXT
 );
 CREATE TABLE IF NOT EXISTS ingested(raw_key TEXT PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS topics(
+  identifier TEXT PRIMARY KEY,
+  topics_json TEXT NOT NULL,
+  method TEXT,
+  version TEXT,
+  assigned_at TEXT
+);
 """
 
 

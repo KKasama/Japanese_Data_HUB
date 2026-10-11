@@ -277,6 +277,8 @@ class Hub:
                     "WHERE deleted=0 AND y BETWEEN 1000 AND 2100 GROUP BY y ORDER BY y")}
                 abs_n = conn.execute("SELECT COUNT(*) FROM records WHERE deleted=0 AND "
                                      "json_extract(work_json,'$.has_abstract_in_source')=1").fetchone()[0]
+                abs_out = conn.execute("SELECT COUNT(*) FROM records WHERE deleted=0 AND "
+                                       "json_extract(work_json,'$.abstract_status')='included'").fetchone()[0]
                 oa_n = conn.execute("SELECT COUNT(*) FROM records WHERE deleted=0 AND "
                                     "json_extract(work_json,'$.open_access.is_oa')=1").fetchone()[0]
                 orcid_n = conn.execute("SELECT COUNT(*) FROM records WHERE deleted=0 AND "
@@ -284,7 +286,7 @@ class Hub:
                 last = conn.execute("SELECT MAX(hub_datestamp) FROM records").fetchone()[0]
                 return 200, {"records": tot, "deleted": dele, "by_source": by_src, "irdb_without_institution": unk,
                              "by_site": by_site, "by_day": by_day, "by_type": by_type, "by_year": by_year,
-                             "with_abstract_flag": abs_n, "open_access": oa_n, "with_orcid": orcid_n,
+                             "with_abstract_flag": abs_n, "with_abstract_output": abs_out, "open_access": oa_n, "with_orcid": orcid_n,
                              "last_update": last}
             if path == "/api/sites":
                 return 200, {"sites": [{"site_id": r[0], "records": r[1]} for r in conn.execute(
@@ -327,7 +329,9 @@ class Hub:
                 r = conn.execute("SELECT * FROM records WHERE identifier=?", (unquote(m.group(1)),)).fetchone()
                 if not r:
                     return 404, {"error": "not found"}
-                return 200, self._work_row(r)
+                row = self._work_row(r)
+                self._attach_topics(conn, [row])
+                return 200, row
             return 404, {"error": "unknown endpoint"}
         except ValueError as e:
             return 400, {"error": str(e)}
@@ -341,6 +345,20 @@ class Hub:
                 "updated": r["hub_datestamp"], "source_datestamp": r["datestamp"],
                 "institution_code": r["institution_code"], "journal_key": r["journal_key"],
                 "doi_prefix": r["doi_prefix"], "site_id": r["site_id"], "work": w}
+
+    @staticmethod
+    def _attach_topics(conn, rows):
+        """分野の自動推定（別表）を、work の外側の "auto_topics" として付ける。原データ・整形結果は変えない。"""
+        ids = [r["identifier"] for r in rows]
+        if not ids:
+            return
+        got = {t["identifier"]: t for t in conn.execute(
+            "SELECT * FROM topics WHERE identifier IN (%s)" % ",".join("?" * len(ids)), ids)}
+        for r in rows:
+            t = got.get(r["identifier"])
+            if t:
+                r["auto_topics"] = dict(json.loads(t["topics_json"]), version=t["version"], assigned_at=t["assigned_at"],
+                                        note="自動推定（題名とキーワードから）。参考情報です")
 
     def _works(self, conn, q):
         lim = min(int(q.get("limit", 100)), 1000)
@@ -373,7 +391,9 @@ class Hub:
         more = len(rows) > lim
         rows = rows[:lim]
         nxt = _b64e([rows[-1]["hub_datestamp"], rows[-1]["identifier"]]) if more else None
-        return {"total": total, "results": [self._work_row(r) for r in rows], "next_cursor": nxt}
+        res = [self._work_row(r) for r in rows]
+        self._attach_topics(conn, res)
+        return {"total": total, "results": res, "next_cursor": nxt}
 
     # ---------------- 収集状況・原データ（画面用） ----------------
     def _status(self, conn):
@@ -404,6 +424,15 @@ class Hub:
             return 404, {"error": "原データを読めません: %s" % e}
         if r["source"] == "jalc":
             want = (r["doi"] or "").replace("https://doi.org/", "").lower()
+            if r["raw_key"].endswith(".json"):   # 検索画面の保存形式（配列）
+                try:
+                    arr = json.loads(raw.decode("utf-8-sig"))
+                except ValueError:
+                    arr = []
+                for d in (arr if isinstance(arr, list) else [arr]):
+                    if isinstance(d, dict) and (d.get("doi") or "").lower() == want:
+                        return 200, {"format": "json", "raw_key": r["raw_key"], "raw": d}
+                return 404, {"error": "原データ内に見つかりません"}
             for line in raw.decode("utf-8").splitlines():
                 try:
                     d = json.loads(line)

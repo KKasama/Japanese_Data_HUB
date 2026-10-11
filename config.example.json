@@ -16,6 +16,11 @@
     "access_key": "(環境変数等から注入)",
     "secret_key": "(環境変数等から注入)"
   },
+  "abstracts": {
+    "_説明": "抄録の出力: off=出さない / permitted_only=第三者利用が可と分かるものだけ / include=出す。変更後は ingest --reprocess",
+    "irdb": "include",
+    "jalc": "off"
+  },
   "irdb": {
     "base_url": "https://irdb.nii.ac.jp/oai/",
     "metadata_prefix": "jpcoar_2.0",

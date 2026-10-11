@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 from . import normalize as N
 from .classify import DEFAULT_ID_REGEX as _IDRX, institution_code, provenance_institution_name
 from .db import upsert_record
+from .jalc_screen import records as screen_records
 from .oai_client import q
 from .util import kid, kids, ln, slug, text, utc_now
 
@@ -75,12 +76,19 @@ def records_from_oai_page(raw, source, native_prefix, raw_key, id_regex):
         yield r
 
 
-def records_from_jalc_chunk(raw, source, raw_key):
+def _jalc_items(raw, raw_key):
+    """JaLC生データ → (data, 検索画面形式か)。.jsonl はREST v2（1行1件）、.json は検索画面の保存形式。"""
+    if raw_key.endswith(".json"):
+        for data, _unknown in screen_records(raw):
+            yield data, True
+        return
     for line in raw.decode("utf-8").splitlines():
-        if not line.strip():
-            continue
-        d = json.loads(line)
-        data = d.get("data") or {}
+        if line.strip():
+            yield (json.loads(line).get("data") or {}), False
+
+
+def records_from_jalc_chunk(raw, source, raw_key):
+    for data, screen in _jalc_items(raw, raw_key):
         if not data.get("doi"):
             continue
         w = N.normalize_jalc(data)
@@ -89,7 +97,8 @@ def records_from_jalc_chunk(raw, source, raw_key):
              "institution_code": None, "institution_how": None,
              "journal_key": w["journal_key"], "journal_title": w["journal_title"],
              "doi": w["doi"], "doi_prefix": w["doi_prefix"], "site_id": data.get("siteId"),
-             "native_prefix": None, "native_xml": None, "provenance": {}, "work": w, "raw_key": raw_key}
+             "native_prefix": None, "native_xml": None, "provenance": {}, "work": w, "raw_key": raw_key,
+             "_screen": screen}
         # 機関リポジトリ由来(SI/NII.JAIRO)のJaLCレコードは、IRDBのOAI識別子を持つ。
         # そこから機関コードを得て、IRDBとの名寄せ・機関別の振り分けに使う。
         irdb_id = next((a.get("id") for a in w["ids"].get("alternate", [])
@@ -102,10 +111,13 @@ def records_from_jalc_chunk(raw, source, raw_key):
         yield r
 
 
-def ingest(store, conn, source, kind, native_prefix=None, id_regex=None, now=None, log=print, reprocess=False):
+def ingest(store, conn, source, kind, native_prefix=None, id_regex=None, now=None, log=print, reprocess=False,
+           abstracts=None):
     """kind: 'oai'（IRDB等のOAI-PMH XML） | 'jalc'（REST JSONL）。"""
     from .classify import DEFAULT_ID_REGEX
     id_regex = id_regex or DEFAULT_ID_REGEX
+    from .policy import apply_abstract_policy, resolve_policy
+    policy = resolve_policy(abstracts)
     done = set() if reprocess else {r[0] for r in conn.execute("SELECT raw_key FROM ingested")}
     stats = {"new": 0, "changed": 0, "same": 0, "pages": 0, "bad_pages": 0}
     for key in store.list("raw/%s/" % source):
@@ -117,6 +129,14 @@ def ingest(store, conn, source, kind, native_prefix=None, id_regex=None, now=Non
             gen = (records_from_oai_page(raw, source, native_prefix, key, id_regex) if kind == "oai"
                    else records_from_jalc_chunk(raw, source, key))
             for r in gen:
+                if r.get("work"):
+                    apply_abstract_policy(r["work"], source, policy)
+                if r.pop("_screen", False):
+                    # 検索画面形式はREST v2より項目が少ない。REST由来の記録がある場合は上書きしない
+                    old = conn.execute("SELECT raw_key FROM records WHERE identifier=?", (r["identifier"],)).fetchone()
+                    if old and old["raw_key"] and old["raw_key"].endswith(".jsonl"):
+                        stats["same"] += 1
+                        continue
                 stats[upsert_record(conn, r, hub_now)] += 1
         except (ET.ParseError, ValueError) as e:
             conn.rollback()

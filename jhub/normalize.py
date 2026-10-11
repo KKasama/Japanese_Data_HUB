@@ -1,7 +1,9 @@
 """OpenAlex互換の work 形式への整形（試作: 主要項目のみ）。
 
 本番では、既存の「JaLC–OpenAlex 項目対応表（79項目）」に置き換える。
-方針: 抄録(abstract)は出力しない。有無だけ has_abstract_in_source として記録する。
+方針: 抄録(abstract)の本文は、正規化器が内部項目 _abstracts として取り出すだけで、出力するかどうかは
+      policy.apply_abstract_policy が決める（既定: IRDBは出力、JaLCは出力しない。切替可能）。
+      有無は常に has_abstract_in_source として記録する。
 """
 import html as _html
 import re
@@ -156,8 +158,17 @@ def normalize_jpcoar(meta, header_identifier=None):
         w["grants"].append({"funder_display_name": text(kid(fr, "funderName")) or None,
                             "award_id": text(kid(fr, "awardNumber")) or None})
 
-    # 抄録は出力しない（有無のみ）
-    w["has_abstract_in_source"] = any(
+    # 抄録: 本文は内部項目 _abstracts に取り出す（出力可否は policy が決める）。有無は常に記録する
+    absts = []
+    for d in kids(meta, "description"):
+        if (d.get("descriptionType") or "").lower() == "abstract" and text(d):
+            absts.append({"lang": _lang2(d.get(XML_LANG)), "text": clean_text(text(d))})
+    for d in kids(meta, "abstract"):
+        if text(d):
+            absts.append({"lang": _lang2(d.get(XML_LANG)), "text": clean_text(text(d))})
+    absts = [a for a in absts if a["text"]]
+    w["_abstracts"] = absts
+    w["has_abstract_in_source"] = bool(absts) or any(
         (d.get("descriptionType") or "").lower() == "abstract" for d in kids(meta, "description")
     ) or kid(meta, "abstract") is not None
     w["journal_key"] = journal_key(issn)
@@ -382,9 +393,14 @@ def normalize_jalc(rec):
     cites = [c for c in (rec.get("citation_list") or []) if isinstance(c, dict)]
     w["references_count"] = len(cites)
     w["referenced_dois"] = [d for d in (clean_doi(c.get("doi")) for c in cites) if d]
-    # 抄録は出力しない（範囲外）。有無だけ記録する
-    w["has_abstract_in_source"] = any(isinstance(d, dict) and (d.get("type") or "").lower() == "abstract" and d.get("description")
-                                      for d in (rec.get("description_list") or []))
+    # 抄録: 本文は内部項目 _abstracts に取り出す（出力可否は policy が決める）。有無は常に記録する
+    absts = [{"lang": _lang2(d.get("lang")), "text": clean_text(d.get("description"))}
+             for d in (rec.get("description_list") or [])
+             if isinstance(d, dict) and (d.get("type") or "").lower() == "abstract" and d.get("description")]
+    absts = [a for a in absts if a["text"]]
+    w["_abstracts"] = absts
+    w["has_abstract_in_source"] = bool(absts)
+    w["third_party_use"] = rec.get("third_party_use")   # 検索画面形式のみ（抄録の第三者利用可否）
     w["site_id"] = rec.get("siteId")
     w["journal_key"] = journal_key(w["issn"], jid, rec.get("siteId"))
     return w

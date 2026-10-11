@@ -209,7 +209,7 @@ function bars(el, obj, max){
 }
 async function loadDash(){
   const s = await api("/api/stats");
-  const k = [["総件数",s.records],["JaLC",s.by_source.jalc||0],["IRDB",s.by_source.irdb||0],["抄録あり（有無のみ）",s.with_abstract_flag],["オープンアクセス",s.open_access],["ORCIDあり",s.with_orcid],["削除済み",s.deleted]];
+  const k = [["総件数",s.records],["JaLC",s.by_source.jalc||0],["IRDB",s.by_source.irdb||0],["抄録あり（原データ）",s.with_abstract_flag],["抄録を出力",s.with_abstract_output||0],["オープンアクセス",s.open_access],["ORCIDあり",s.with_orcid],["削除済み",s.deleted]];
   $("#kpis").innerHTML = k.map(([l,n]) => `<div class="card kpi"><div class="n">${num(n)}</div><div class="l">${l}</div></div>`).join("");
   bars($("#bars-site"), s.by_site);
   bars($("#bars-type"), s.by_type);
@@ -257,9 +257,10 @@ $("#s-prev").onclick = () => doSearch(page-1);
 async function loadFilters(){
   try{
     const [a,b] = await Promise.all([api("/api/sites"), api("/api/institutions")]);
+    window.INST = {}; b.institutions.forEach(x=>{ window.INST[x.code]=x.name_ja; });
     $("#f-jnl").site.innerHTML += a.sites.map(x=>`<option value="${esc(x.site_id)}">${esc(x.site_id)}（${num(x.records)}）</option>`).join("");
     $("#f-search").site.innerHTML += a.sites.map(x=>`<option value="${esc(x.site_id)}">${esc(x.site_id)}（${num(x.records)}）</option>`).join("");
-    $("#f-search").institution.innerHTML += b.institutions.map(x=>`<option value="${esc(x.code)}">${esc(x.name_ja||x.code)}（${num(x.records)}）</option>`).join("");
+    $("#f-search").institution.innerHTML += b.institutions.map(x=>`<option value="${esc(x.code)}">${esc(x.name_ja?x.name_ja+"（"+x.code+"）":x.code)}（${num(x.records)}）</option>`).join("");
   }catch(e){}
 }
 
@@ -293,6 +294,7 @@ async function openDetail(id){
   try{ raw = await api("/api/raw/"+encodeURIComponent(id)); }catch(e){ rawErr = e.message; }
   const w = rec.work || {};
   const au = (w.authorships||[]).map(a=>{ const o=(a.author&&a.author.orcid)||a.orcid; return esc(a.raw_author_name||"")+(o?` <span class="tag">ORCID</span>`:""); }).join("、");
+  function topicsHtml(a){ return (a.topics||[]).map((t,i)=>esc(t.display_name||t.name)+' <span class="mute">('+(t.score!=null?Number(t.score).toFixed(2):"")+')</span>').join("<br>")+'<div class="small mute">自動推定'+(a.method?'（'+esc(a.method)+'）':"")+'。参考情報です</div>'; }
   const nice = '<dl>'+
     row("タイトル", esc(w.title)) + row("英題", esc((w.titles||[]).filter(t=>t.lang==="en").map(t=>t.text).join(" / "))) +
     row("著者", au) + row("DOI", w.doi?`<a href="${esc(w.doi)}" target="_blank" rel="noopener">${esc(w.doi)}</a>`:"") +
@@ -302,8 +304,9 @@ async function openDetail(id){
     row("出版者", esc(w.publisher)) + row("キーワード", esc((w.keywords||[]).map(k=>k.keyword).join("、"))) +
     row("OA", w.open_access&&w.open_access.is_oa!=null?esc(String(w.open_access.is_oa)):"") + row("助成", esc((w.grants||[]).map(g=>g.funder_display_name||g.award_id||JSON.stringify(g)).join("、"))) +
     row("参考文献", w.references_count!=null?esc(w.references_count)+"件（DOI "+(w.referenced_dois||[]).length+"件）":"") +
-    row("抄録", w.has_abstract_in_source?"あり（本文は出力しません）":"なし") +
-    row("サイト", esc(rec.site_id)) + row("機関コード", esc(rec.institution_code)) + row("ハブ更新日時", esc(rec.updated)) + '</dl>';
+    row("分野（自動推定）", (rec.auto_topics?topicsHtml(rec.auto_topics):"")) +
+    row("抄録", abstractHtml(w)) +
+    row("サイト", esc(rec.site_id)) + row("機関", rec.institution_code?esc(((window.INST||{})[rec.institution_code]||"")+(((window.INST||{})[rec.institution_code])?"（":"")+rec.institution_code+(((window.INST||{})[rec.institution_code])?"）":"")):"") + row("ハブ更新日時", esc(rec.updated)) + '</dl>';
   const rawTxt = raw ? (raw.format==="xml" ? raw.raw : JSON.stringify(raw.raw,null,1)) : null;
   $("#dlg-body").innerHTML = nice +
     '<div class="two"><div><div class="small mute" style="margin-bottom:4px">整形後（OpenAlex互換のJSON）</div><pre>'+esc(JSON.stringify(w,null,1))+'</pre></div>'+
@@ -326,7 +329,12 @@ function renderDlInfo(){
   $("#oai-recs").href = "/oai?verb=ListRecords&metadataPrefix=jhub_work"+set;
 }
 let cancelDl = false;
-function flat(w, x){ const f = (a)=>Array.isArray(a)?a.join("; "):(a??""); return {identifier:x.identifier, source:x.source, doi:w.doi, title:w.title, authors:(w.authorships||[]).map(a=>a.raw_author_name).join("; "), year:w.publication_year, date:w.publication_date, type:w.type, language:w.language, journal:w.journal_title, issn:f(w.issn), volume:w.biblio&&w.biblio.volume, issue:w.biblio&&w.biblio.issue, first_page:w.biblio&&w.biblio.first_page, last_page:w.biblio&&w.biblio.last_page, publisher:w.publisher, site_id:x.site_id, institution_code:x.institution_code, open_access:w.open_access&&w.open_access.is_oa, has_abstract:w.has_abstract_in_source, references_count:w.references_count, updated:x.updated}; }
+function abstractHtml(w){
+  if(w.abstracts&&w.abstracts.length) return w.abstracts.map(a=>'<div style="margin-bottom:6px">'+(a.lang?'<span class="mute">['+esc(a.lang)+']</span> ':'')+esc(a.text)+'</div>').join("");
+  const m={withheld_by_policy:"原データにあり（提供方針により本文は出力していません）",not_permitted:"原データにあり（第三者利用の可否が確認できないため出力していません）",none:"なし"};
+  return esc(m[w.abstract_status]||(w.has_abstract_in_source?"あり（本文は出力していません）":"なし"));
+}
+function flat(w, x){ const f = (a)=>Array.isArray(a)?a.join("; "):(a??""); return {identifier:x.identifier, source:x.source, doi:w.doi, title:w.title, authors:(w.authorships||[]).map(a=>a.raw_author_name).join("; "), year:w.publication_year, date:w.publication_date, type:w.type, language:w.language, journal:w.journal_title, issn:f(w.issn), volume:w.biblio&&w.biblio.volume, issue:w.biblio&&w.biblio.issue, first_page:w.biblio&&w.biblio.first_page, last_page:w.biblio&&w.biblio.last_page, publisher:w.publisher, site_id:x.site_id, institution_code:x.institution_code, open_access:w.open_access&&w.open_access.is_oa, has_abstract:w.has_abstract_in_source, abstract_status:w.abstract_status, abstract:(w.abstracts||[]).map(a=>a.text).join(" / "), references_count:w.references_count, updated:x.updated}; }
 function csvCell(v){ v = v==null?"":String(v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
 $("#dl-cancel").onclick = () => { cancelDl = true; };
 $("#dl-go").onclick = async () => {
