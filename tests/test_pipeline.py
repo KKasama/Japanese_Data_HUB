@@ -460,3 +460,29 @@ class JaLCRepositoryTest(unittest.TestCase):
         self.assertEqual(r["institution_code"], "00926")
         self.assertIn("inst:00926", r["setspecs"])
         self.assertEqual(r["institution_how"], "jalc_alternate_id")
+
+
+class JournalExportTest(unittest.TestCase):
+    def test_export_by_journal_and_api(self):
+        import json as _j, os as _o, tempfile as _t
+        from jhub.export import export_by_journal
+        tmp = _t.mkdtemp()
+        store, dbp = LocalStore(tmp + "/s"), tmp + "/h.sqlite"
+        jalc = MockJaLC()
+        try:
+            harvest_jalc(JaLCClient(jalc.url, max_rps=0), store, "jalc", log=lambda *a: None)
+            conn = connect(dbp)
+            ingest(store, conn, "jalc", "jalc", log=lambda *a: None)
+            js = export_by_journal(dbp, tmp + "/out", log=lambda *a: None)
+            self.assertEqual({j["journal_key"] for j in js}, {"1884-4375", "1111-2222", "5555-6666"})
+            top = [j for j in js if j["journal_key"] == "1884-4375"][0]
+            self.assertEqual(top["records"], 2)
+            self.assertEqual(top["doi_prefixes"], ["10.11162"])
+            with gzip.open(_o.path.join(tmp, "out", top["file"]), "rt", encoding="utf-8") as f:
+                self.assertEqual(len(f.read().strip().splitlines()), 2)
+            code, d = Hub(dbp).api("/api/journals", {"q": "1884"})
+            self.assertEqual(d["total"], 1)
+            self.assertEqual(d["journals"][0]["doi_prefix"], "10.11162")
+            self.assertEqual(d["journals"][0]["records"], 2)
+        finally:
+            jalc.stop()

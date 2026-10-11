@@ -91,6 +91,7 @@ code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:12px;wor
 <nav role="tablist">
   <button role="tab" data-tab="dash" aria-selected="true">ダッシュボード</button>
   <button role="tab" data-tab="search" aria-selected="false">検索・閲覧</button>
+  <button role="tab" data-tab="jnl" aria-selected="false">ジャーナル</button>
   <button role="tab" data-tab="dl" aria-selected="false">ダウンロード</button>
   <button role="tab" data-tab="status" aria-selected="false">収集状況</button>
 </nav>
@@ -122,6 +123,21 @@ code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:12px;wor
     <div class="small mute" id="s-summary">検索すると結果が表示されます。</div>
     <div style="overflow:auto"><table><thead><tr><th>タイトル</th><th>著者</th><th>年</th><th>ジャーナル</th><th>種別</th><th>更新</th></tr></thead><tbody id="s-body"></tbody></table></div>
     <div class="pager"><button class="btn ghost" id="s-prev" disabled>前へ</button><button class="btn ghost" id="s-next" disabled>次へ</button><span class="small mute" id="s-page"></span></div>
+  </div>
+</section>
+
+<section id="jnl">
+  <div class="card">
+    <form class="filters" id="f-jnl">
+      <div><label>ジャーナル名・ISSN<input name="q" placeholder="例: 環境 / 1884-4375"></label></div>
+      <div><label>サイト<select name="site"><option value="">すべて</option></select></label></div>
+      <div><button class="btn" type="submit">絞り込み</button></div>
+    </form>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <div class="small mute" id="j-summary">読み込み中…</div>
+    <div style="overflow:auto"><table><thead><tr><th>ジャーナル</th><th>ISSN（キー）</th><th>DOIプレフィックス</th><th>件数</th><th></th></tr></thead><tbody id="j-body"></tbody></table></div>
+    <div class="small mute" style="margin-top:8px">ジャーナルごとのファイルは、コマンド <code>python3 -m jhub export --by journal --out export_jnl</code> でも書き出せます（1ジャーナル＝1ファイル、一覧は manifest.json）。</div>
   </div>
 </section>
 
@@ -178,6 +194,7 @@ const api = async (p) => { const r = await fetch(p); const j = await r.json().ca
 function showTab(id){
   $$("nav button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab===id));
   $$("main section").forEach(s => s.classList.toggle("on", s.id===id));
+  if(id==="jnl") loadJournals();
   if(id==="dl") renderDlInfo();
   if(id==="status") loadStatus();
   try{ history.replaceState(null,"","#"+id); }catch(e){}
@@ -240,10 +257,32 @@ $("#s-prev").onclick = () => doSearch(page-1);
 async function loadFilters(){
   try{
     const [a,b] = await Promise.all([api("/api/sites"), api("/api/institutions")]);
+    $("#f-jnl").site.innerHTML += a.sites.map(x=>`<option value="${esc(x.site_id)}">${esc(x.site_id)}（${num(x.records)}）</option>`).join("");
     $("#f-search").site.innerHTML += a.sites.map(x=>`<option value="${esc(x.site_id)}">${esc(x.site_id)}（${num(x.records)}）</option>`).join("");
     $("#f-search").institution.innerHTML += b.institutions.map(x=>`<option value="${esc(x.code)}">${esc(x.name_ja||x.code)}（${num(x.records)}）</option>`).join("");
   }catch(e){}
 }
+
+// ---------- ジャーナル一覧 ----------
+async function loadJournals(){
+  const f = $("#f-jnl"), p = new URLSearchParams();
+  if(f.q.value.trim()) p.set("q", f.q.value.trim());
+  if(f.site.value) p.set("site", f.site.value);
+  p.set("limit","200");
+  $("#j-summary").textContent = "読み込み中…";
+  try{
+    const r = await api("/api/journals?"+p);
+    $("#j-summary").textContent = `${num(r.total)}誌（件数の多い順に${num(r.journals.length)}誌を表示）`;
+    $("#j-body").innerHTML = r.journals.map(j => `<tr style="cursor:default"><td>${esc(j.title||"(名称なし)")}</td><td><code>${esc(j.key)}</code></td><td>${esc(j.doi_prefix||"")}${j.doi_prefixes>1?` <span class="tag">他${j.doi_prefixes-1}</span>`:""}</td><td>${num(j.records)}</td><td style="white-space:nowrap"><button class="btn ghost" data-act="view" data-k="${esc(j.key)}">論文を見る</button> <button class="btn ghost" data-act="dl" data-k="${esc(j.key)}">取得</button></td></tr>`).join("") || '<tr><td colspan="5" class="mute">該当なし</td></tr>';
+    $$("#j-body button").forEach(b => b.onclick = () => {
+      const fs = $("#f-search"); fs.reset(); fs.journal.value = b.dataset.k;
+      if(b.dataset.act==="view"){ showTab("search"); stack=[""]; doSearch(0); }
+      else { showTab("dl"); }
+      renderDlInfo();
+    });
+  }catch(e){ $("#j-summary").textContent = "エラー: "+e.message; }
+}
+$("#f-jnl").onsubmit = e => { e.preventDefault(); loadJournals(); };
 
 // ---------- 詳細 ----------
 function row(k,v){ return v===null||v===undefined||v===""||(Array.isArray(v)&&!v.length) ? "" : `<dt>${esc(k)}</dt><dd>${v}</dd>`; }
@@ -345,7 +384,7 @@ async function loadStatus(){
   catch(e){ $("#hdr-dot").className="dot bad"; $("#hdr-health").textContent="接続できません"; }
   loadFilters();
   try{ await loadDash(); }catch(e){ $("#kpis").innerHTML='<div class="card">データを読み込めません: '+esc(e.message)+'</div>'; }
-  const t = (location.hash||"").slice(1); if(["dash","search","dl","status"].includes(t)) showTab(t);
+  const t = (location.hash||"").slice(1); if(["dash","search","jnl","dl","status"].includes(t)) showTab(t);
 })();
 </script>
 </body>

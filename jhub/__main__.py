@@ -5,7 +5,7 @@
   ingest         生データを振り分け・整形してDBへ
   load-institutions FILE.csv   機関台帳（code,name_ja,name_en,ror,url）の読み込み
   serve          OAI-PMH / API を提供
-  export         機関別バルクファイルを出力
+  export         バルクファイルを出力（既定は機関/サイト別、--by journal でジャーナル別）
   stats          件数の確認
 """
 import argparse
@@ -14,7 +14,7 @@ import sys
 
 from . import __version__
 from .db import connect, load_institutions_csv
-from .export import export_bulk
+from .export import export_bulk, export_by_journal
 from .harvest import harvest_jalc, harvest_oai
 from .ingest import ingest
 from .jalc_client import JaLCClient
@@ -37,6 +37,7 @@ def main(argv=None):
     ap.add_argument("--set")
     ap.add_argument("--out", default="export")
     ap.add_argument("--since")
+    ap.add_argument("--by", choices=["source", "journal"], default="source", help="export: 出力の分け方（既定: 機関/サイト別、journal: ジャーナル別）")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8080)
     a = ap.parse_args(argv)
@@ -69,7 +70,7 @@ def main(argv=None):
         print("serving on http://%s:%d  (画面: /  、/oai, /api/*, /health)" % (a.host, a.port))
         srv.serve_forever()
     elif a.command == "export":
-        export_bulk(cfg["db"], a.out, a.since)
+        (export_by_journal(cfg["db"], a.out, a.since, a.site) if a.by == "journal" else export_bulk(cfg["db"], a.out, a.since))
     elif a.command == "stats":
         code, d = Hub(cfg["db"]).api("/api/stats", {})
         print(json.dumps(d, ensure_ascii=False, indent=1))

@@ -6,7 +6,7 @@ JaLC（J-STAGE等を含む）とIRDBのメタデータを、**収集 → 生デ�
 
 | 項目 | 状態 |
 |---|---|
-| 自動テスト 27件（モックのIRDB/JaLCで、収集→再開→差分→再整形→削除→振り分け→提供→出力まで） | 通過 |
+| 自動テスト 28件（モックのIRDB/JaLCで、収集→再開→差分→再整形→削除→振り分け→提供→出力まで） | 通過 |
 | **JaLC（公開API）の実データ** | **確認済み**: J-STAGE、J-STAGE Data、Jxiv、NDL（4種のsiteId・計30件）で、収集→生データ保存→整形→OAI-PMH/API提供まで動作 |
 | **IRDBの実データ** | **未確認**: IRDBのレコード取得（ListRecords等）は申請IPからのみ。固定IPの環境を準備し、NIIに手続きを確認中 |
 | JaLC JSONの項目 | 実データで確認した項目に対応（ORCID、助成、権利、主題、日付、関連、参考文献DOI、版 など）。他のsiteIdは順次確認 |
@@ -32,7 +32,8 @@ python3 -m jhub ingest                  # 取り込み。整形ルールを変�
 python3 -m jhub load-institutions institutions.csv   # 機関台帳(code,name_ja,name_en,ror,url)
 python3 -m jhub stats
 python3 -m jhub serve --port 8080
-python3 -m jhub export --out export
+python3 -m jhub export --out export                         # 機関/サイト別
+python3 -m jhub export --by journal --out export_jnl        # ジャーナル別（1誌=1ファイル）
 ```
 
 中断しても、同じコマンドで続きから再開します。ingestは何度実行しても同じ結果になります。

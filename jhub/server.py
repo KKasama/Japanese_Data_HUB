@@ -308,11 +308,18 @@ class Hub:
             if path == "/api/journals":
                 lim = min(int(q.get("limit", 100)), 1000)
                 like = "%" + q["q"] + "%" if q.get("q") else "%"
+                w, a = ["deleted=0", "journal_key IS NOT NULL", "(journal_key LIKE ? OR journal_title LIKE ?)"], [like, like]
+                if q.get("site"):
+                    w.append("site_id=?")
+                    a.append(q["site"])
+                tot = conn.execute("SELECT COUNT(DISTINCT journal_key) FROM records WHERE %s" % " AND ".join(w), a).fetchone()[0]
                 rows = conn.execute(
-                    "SELECT journal_key k, MAX(journal_title) t, COUNT(*) n FROM records WHERE deleted=0 "
-                    "AND journal_key IS NOT NULL AND (journal_key LIKE ? OR journal_title LIKE ?) "
-                    "GROUP BY k ORDER BY n DESC LIMIT ?", (like, like, lim)).fetchall()
-                return 200, {"journals": [{"key": r["k"], "title": r["t"], "records": r["n"]} for r in rows]}
+                    "SELECT journal_key k, MAX(journal_title) t, MAX(doi_prefix) p, COUNT(DISTINCT doi_prefix) np, "
+                    "MAX(site_id) s, COUNT(*) n FROM records WHERE %s GROUP BY k ORDER BY n DESC, k LIMIT ?"
+                    % " AND ".join(w), a + [lim]).fetchall()
+                return 200, {"total": tot, "journals": [
+                    {"key": r["k"], "title": r["t"], "doi_prefix": r["p"], "doi_prefixes": r["np"],
+                     "site_id": r["s"], "records": r["n"]} for r in rows]}
             if path == "/api/works":
                 return 200, self._works(conn, q)
             m = re.match(r"^/api/works/(.+)$", path)
