@@ -155,8 +155,12 @@ def normalize_jpcoar(meta, header_identifier=None):
         if text(s):
             w["keywords"].append({"keyword": text(s), "lang": s.get(XML_LANG)})
     for fr in kids(meta, "fundingReference"):
-        w["grants"].append({"funder_display_name": text(kid(fr, "funderName")) or None,
-                            "award_id": text(kid(fr, "awardNumber")) or None})
+        g = {"funder_display_name": text(kid(fr, "funderName")) or None,
+             "award_id": text(kid(fr, "awardNumber")) or None}
+        for fi in kids(fr, "funderIdentifier"):      # 生データにRORがあれば保持する
+            if (fi.get("funderIdentifierType") or "").upper() == "ROR" and text(fi):
+                g["funder_ror"] = text(fi)
+        w["grants"].append(g)
 
     # 抄録: 本文は内部項目 _abstracts に取り出す（出力可否は policy が決める）。有無は常に記録する
     absts = []

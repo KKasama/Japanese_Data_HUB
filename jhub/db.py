@@ -37,6 +37,15 @@ CREATE TABLE IF NOT EXISTS institutions(
   code TEXT PRIMARY KEY, name_ja TEXT, name_en TEXT, ror TEXT, url TEXT
 );
 CREATE TABLE IF NOT EXISTS ingested(raw_key TEXT PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS ror_cache(
+  key TEXT PRIMARY KEY,          -- 正規化した所属文字列
+  query TEXT,
+  ror TEXT,                      -- 一致なしは NULL（「照会済み・一致なし」も記録する）
+  display_name TEXT,
+  score REAL,
+  matching_type TEXT,
+  checked_at TEXT
+);
 CREATE TABLE IF NOT EXISTS topics(
   identifier TEXT PRIMARY KEY,
   topics_json TEXT NOT NULL,

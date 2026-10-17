@@ -5,3 +5,8 @@ config.json
 export/
 *.sqlite
 export*/
+ror_unmatched.csv
+ror_matched.csv
+ror_none_list.csv
+config.json.bak
+.DS_Store

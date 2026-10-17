@@ -6,6 +6,7 @@
   export-topics-input --out FILE  分野の自動推定ツールへ渡す入力JSONLを書き出す（--limit, --site）
   import-topics FILE [--topics-version V]  ツールの出力JSONLを受け取って保存
   ingest         生データを振り分け・整形してDBへ
+  enrich-ror     RORが無い所属をROR公式APIで照合して付与（--max-dois で照会数の上限）。生データは変更しない
   load-repositorylist FILE.csv  IRDBの参加リポジトリ一覧CSVから、機関コードに機関名を付ける
   load-institutions FILE.csv   機関台帳（code,name_ja,name_en,ror,url）の読み込み
   serve          OAI-PMH / API を提供
@@ -41,6 +42,7 @@ def main(argv=None):
     ap.add_argument("--all", action="store_true", help="export-topics-input: 推定済みの記録も含める")
     ap.add_argument("--per-prefix", type=int, help="harvest-jalc: 1プレフィックスあたりの最大件数（試験用）")
     ap.add_argument("--max-pages", type=int)
+    ap.add_argument("--retry-unmatched", action="store_true", help="enrich-ror: 「一致なし」だった所属も、方式を変えた後にやり直す")
     ap.add_argument("--set")
     ap.add_argument("--out", default="export")
     ap.add_argument("--since")
@@ -83,8 +85,13 @@ def main(argv=None):
     elif a.command == "ingest":
         conn = connect(cfg["db"])
         ingest(store, conn, "irdb", "oai", irdb.get("metadata_prefix", "jpcoar_2.0"), irdb.get("id_regex"),
-               reprocess=a.reprocess, abstracts=cfg.get("abstracts"))
-        ingest(store, conn, "jalc", "jalc", reprocess=a.reprocess, abstracts=cfg.get("abstracts"))
+               reprocess=a.reprocess, abstracts=cfg.get("abstracts"), ror=cfg.get("ror"))
+        ingest(store, conn, "jalc", "jalc", reprocess=a.reprocess, abstracts=cfg.get("abstracts"), ror=cfg.get("ror"))
+    elif a.command == "enrich-ror":
+        from . import ror as R
+        rc = R.resolve_config(dict(cfg.get("ror") or {}, enabled=True))
+        client = R.RorClient(rc["base_url"], rc["delay"], rc["client_id"], ua)
+        R.enrich(connect(cfg["db"]), client, rc, limit=a.max_dois, retry=a.retry_unmatched)
     elif a.command == "load-repositorylist":
         from .institutions import load_repositorylist
         r = load_repositorylist(cfg["db"], a.arg)

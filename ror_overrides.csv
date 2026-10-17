@@ -1,0 +1,29 @@
+query,ror
+University of Occupational and Environmental Health,https://ror.org/020p3h829
+"NISTEP, RIKEN, The University of Tokyo",none
+"NISTEP, RIKEN, Shiga University",none
+"NISTEP, RIKEN, JST PRESTO",none
+"Building Research Institute, Ministry of Construction",none
+"California State University San Bernardino, Claremont Colleges Library",none
+re:japan society for the promotion of science.*kakenhi,https://ror.org/00hhkn466
+re:jsps kakenhi,https://ror.org/00hhkn466
+re:^kakenhi,https://ror.org/00hhkn466
+Japan Society for the Promotion of Science,https://ror.org/00hhkn466
+the Japan Society for the Promotion of Science,https://ror.org/00hhkn466
+re:science university of tokyo|tokyo university of science,https://ror.org/05sj3n476
+re:ecogenomics|エコジェノミクス|エコゲノミックス,https://ror.org/00hbq5j06
+re:kajima corp|鹿島建設|鹿島株式会社,https://ror.org/048gksa87
+re:hitachi.?.?.?ltd|日立製作所,https://ror.org/02exqgm79
+re:asahi glass|旭硝子,https://ror.org/02nnhbq91
+re:ニッセイ基礎研究所|nli research,https://ror.org/05920nc59
+re:preferred networks,https://ror.org/05xeefy56
+re:筑波記念|tsukuba memorial,https://ror.org/010bv4c75
+re:発電設備技術検査協会|japan power engineering and inspection,https://ror.org/00vc3qb55
+re:茜会|akane medical,none
+re:地球環境戦略研究機関|global environmental strategies,https://ror.org/01sdhz737
+re:^(文部科学省 )?(科学技術・学術政策研究所|nistep)$|national institute of science and technology policy,https://ror.org/00kbjsx88
+re:横浜国立大学|yokohama national university,https://ror.org/03zyp6p76
+re:専修大学|senshu university,https://ror.org/03jzxkg37
+re:大阪府立大学|osaka prefecture university,https://ror.org/02cf1je33
+re:情報通信政策研究所|institute for information and communications policy,https://ror.org/05jjkap67
+re:tokyo institute of technology|東京工業大学,https://ror.org/0112mx960

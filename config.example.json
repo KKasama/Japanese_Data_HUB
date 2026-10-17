@@ -21,6 +21,14 @@
     "irdb": "include",
     "jalc": "off"
   },
+  "ror": {
+    "_説明": "生データにRORが無い所属だけ、ROR公式APIで照合して付与。enabled=trueでingest時にキャッシュを適用。API照会は enrich-ror",
+    "enabled": true,
+    "min_score": 0.9,
+    "delay": 0.2,
+    "client_id": null,
+    "overrides": null
+  },
   "irdb": {
     "base_url": "https://irdb.nii.ac.jp/oai/",
     "metadata_prefix": "jpcoar_2.0",

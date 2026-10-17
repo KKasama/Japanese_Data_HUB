@@ -705,3 +705,150 @@ class AbstractPolicyTest(unittest.TestCase):
         apply_abstract_policy(w2, "irdb", {"irdb": "off"})
         self.assertNotIn("abstracts", w2)
         self.assertEqual(w2["abstract_status"], "withheld_by_policy")
+
+
+class RorEnrichTest(unittest.TestCase):
+    """ROR補完: 生データのRORは尊重し、無い所属・助成機関だけをAPI照合で付与。生データは不変。"""
+
+    class FakeClient:
+        def __init__(self):
+            self.calls = []
+
+        def search(self, name):
+            self.calls.append("search:" + name)
+            if name == "京都大学":
+                return {"items": [{"id": "https://ror.org/02kpeqv85", "names": [
+                    {"value": "Kyoto University", "types": ["ror_display"]},
+                    {"value": "京都大学", "types": ["label"]}]}]}
+            return {"items": []}
+
+        def match(self, s):
+            self.calls.append(s)
+            known = {"東京大学": ("https://ror.org/057zh3y96", "University of Tokyo", 1.0, True),
+                     "purdue university": ("https://ror.org/0bbbbbb22", "Hue University of Education", 1.0, True),
+                     "japan society for the promotion of science": ("https://ror.org/00hhkn466", "JSPS", 1.0, True),
+                     "曖昧大学": ("https://ror.org/0aaaaaa11", "Maybe U", 0.6, False)}
+            k = s.lower()
+            if k not in known:
+                return {"items": []}
+            i, n, sc, ch = known[k]
+            return {"items": [{"score": sc, "chosen": ch, "matching_type": "EXACT",
+                               "organization": {"id": i, "names": [{"value": n, "types": ["ror_display"]}]
+                                            + ([{"value": "東京大学", "types": ["label"]}] if "Tokyo" in n else [])
+                                            + ([{"value": "Japan Society for the Promotion of Science", "types": ["label"]}] if n == "JSPS" else [])}}]}
+
+    def _work(self):
+        return {"authorships": [
+            {"raw_affiliation_strings": ["東京大学"], "institutions": []},
+            {"raw_affiliation_strings": ["東京大学"], "institutions": [{"ror": "https://ror.org/05dxps055"}]},
+            {"raw_affiliation_strings": ["曖昧大学"], "institutions": []},
+            {"raw_affiliation_strings": ["不明機関"], "institutions": []}],
+            "grants": [{"funder_display_name": "Japan Society for the Promotion of Science"},
+                       {"funder_display_name": "X", "funder_ror": "https://ror.org/0abc12345"}]}
+
+    def _db(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        return connect(os.path.join(d, "h.sqlite"))
+
+    def test_enrich_and_apply(self):
+        from jhub import ror as R
+        conn = self._db()
+        w = self._work()
+        conn.execute("INSERT INTO records(identifier,source,hub_datestamp,deleted,work_json) VALUES('x','jalc','2026-01-01T00:00:00Z',0,?)",
+                     (json.dumps(w, ensure_ascii=False),))
+        fc = self.FakeClient()
+        r = R.enrich(conn, fc, {"min_score": 0.9}, log=noop, now="2026-10-17T00:00:00Z")
+        # 同じ文字列は1回だけ照会。RORが既にある所属・助成は照会しない
+        self.assertEqual(sorted(fc.calls), sorted(["東京大学", "曖昧大学", "search:曖昧大学", "不明機関", "Japan Society for the Promotion of Science"]))
+        self.assertEqual(r["records_updated"], 1)
+        out = json.loads(conn.execute("SELECT work_json FROM records").fetchone()[0])
+        a = out["authorships"]
+        self.assertEqual(a[0]["institutions"][0]["ror"], "https://ror.org/057zh3y96")
+        self.assertEqual(a[0]["institutions"][0]["source"], "ror_affiliation_api")
+        self.assertEqual(a[1]["institutions"], [{"ror": "https://ror.org/05dxps055"}])   # 生データ尊重
+        self.assertEqual(a[2]["institutions"], [])   # chosen=False / 低スコアは付けない
+        self.assertEqual(a[3]["institutions"], [])
+        self.assertEqual(out["grants"][0]["funder"]["ror"], "https://ror.org/00hhkn466")
+        self.assertEqual(out["grants"][1]["funder"]["ror"], "https://ror.org/0abc12345")
+        # 2回目はAPIを呼ばない（「一致なし」もキャッシュ済み）
+        fc2 = self.FakeClient()
+        R.enrich(conn, fc2, {"min_score": 0.9}, log=noop)
+        self.assertEqual(fc2.calls, [])
+
+    def test_ingest_applies_cache_and_raw_untouched(self):
+        from jhub import ror as R
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, True)
+        store = LocalStore(os.path.join(tmp, "store"))
+        conn = connect(os.path.join(tmp, "h.sqlite"))
+        irdb = MockIRDB(make_records(1), page_size=10)
+        harvest_oai(OAIClient(irdb.url, delay=0), store, "irdb", "jpcoar_2.0")
+        irdb.close() if hasattr(irdb, "close") else None
+        before = {k: store.get(k) for k in store.list("raw/irdb/")}
+        ingest(store, conn, "irdb", "oai", "jpcoar_2.0", log=noop, ror={"enabled": True})
+        affs = [s for row in conn.execute("SELECT work_json FROM records WHERE work_json IS NOT NULL")
+                for a in json.loads(row[0])["authorships"] for s in a["raw_affiliation_strings"]]
+        if not affs:
+            self.skipTest("サンプルに所属がない")
+        R.cache_put(conn, R.norm_key(affs[0]), affs[0],
+                    {"ror": "https://ror.org/057zh3y96", "display_name": "U", "score": 1.0, "matching_type": "EXACT"}, "t")
+        ingest(store, conn, "irdb", "oai", "jpcoar_2.0", log=noop, reprocess=True, ror={"enabled": True})
+        found = [i for row in conn.execute("SELECT work_json FROM records WHERE work_json IS NOT NULL")
+                 for a in json.loads(row[0])["authorships"] for i in a["institutions"]
+                 if i.get("source") == "ror_affiliation_api"]
+        self.assertTrue(found)
+        self.assertEqual(before, {k: store.get(k) for k in store.list("raw/irdb/")})
+
+    def test_compound_skipped_and_japanese_head_exact(self):
+        from jhub import ror as R
+        fc = self.FakeClient()
+        self.assertIsNone(R.resolve_string(fc, "NISTEP / RIKEN / The University of Tokyo", 0.9))
+        self.assertEqual(fc.calls, [])          # 複数機関並記は照会もしない
+        m = R.resolve_string(fc, "京都大学環境科学センター", 0.9)
+        self.assertEqual(m["ror"], "https://ror.org/02kpeqv85")
+        self.assertEqual(m["matching_type"], "EXACT_NAME")
+        self.assertIsNone(R.resolve_string(fc, "未知大学理学部", 0.9))   # 先頭名が完全一致しなければ付けない
+        self.assertEqual(R.jp_head("東北大学大学院工学研究科"), "東北大学")
+
+    def test_tie_exact_name_and_regex_override(self):
+        from jhub import ror as R
+        def org(i, names): return {"score": 1.0, "chosen": False, "matching_type": "SINGLE SEARCH",
+                                  "organization": {"id": i, "names": [{"value": n, "types": []} for n in names]}}
+        resp = {"items": [org("https://ror.org/02m7axw05", ["JSPS", "JSPS London"]),
+                          org("https://ror.org/00hhkn466", ["JSPS", "Japan Society for the Promotion of Science"])]}
+        m = R.best_match(resp, 0.9, "Japan Society for the Promotion of Science")
+        self.assertEqual(m["ror"], "https://ror.org/00hhkn466")
+        self.assertIsNone(R.best_match(resp, 0.9, "JSPS"))          # 「JSPS」は2組織に一致 → 付けない
+        R.set_overrides({"re:jsps kakenhi": "https://ror.org/00hhkn466"})
+        self.addCleanup(R.set_overrides, {})
+        c = self._db()
+        self.assertEqual(R.cache_get(c, R.norm_key("the JSPS KAKENHI (19J15582)"))["ror"], "https://ror.org/00hhkn466")
+
+    def test_requery_after_cache_cleared(self):
+        from jhub import ror as R
+        w = {"authorships": [{"raw_affiliation_strings": ["東京大学"], "institutions": [
+            {"ror": "https://ror.org/057zh3y96", "source": "ror_affiliation_api"}]}], "grants": []}
+        self.assertEqual(R.affiliations_without_ror(w), ["東京大学"])   # 自動付与分は数えない
+
+    def test_unrelated_name_rejected(self):
+        from jhub import ror as R
+        self.assertIsNone(R.resolve_string(self.FakeClient(), "Purdue University", 0.9))
+
+    def test_manual_overrides_win(self):
+        from jhub import ror as R
+        conn = self._db()
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d, True)
+        f = os.path.join(d, "o.csv")
+        open(f, "w", encoding="utf-8").write("query,ror\nUniversity of Occupational and Environmental Health,https://ror.org/020p3h829\n誤り,none\n")
+        R.set_overrides(R.load_overrides(f))
+        self.addCleanup(R.set_overrides, {})
+        w = {"authorships": [{"raw_affiliation_strings": ["University of Occupational and Environmental Health"],
+                              "institutions": []}], "grants": []}
+        R.cache_put(conn, R.norm_key("University of Occupational and Environmental Health"), "x",
+                    {"ror": "https://ror.org/0590fg074", "display_name": "Environmental Health", "score": 1.0,
+                     "matching_type": "SINGLE SEARCH"}, "t")
+        R.apply_ror(w, conn, {"min_score": 0.9})
+        self.assertEqual(w["authorships"][0]["institutions"][0]["ror"], "https://ror.org/020p3h829")
+

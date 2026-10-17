@@ -112,12 +112,16 @@ def records_from_jalc_chunk(raw, source, raw_key):
 
 
 def ingest(store, conn, source, kind, native_prefix=None, id_regex=None, now=None, log=print, reprocess=False,
-           abstracts=None):
+           abstracts=None, ror=None):
     """kind: 'oai'（IRDB等のOAI-PMH XML） | 'jalc'（REST JSONL）。"""
     from .classify import DEFAULT_ID_REGEX
     id_regex = id_regex or DEFAULT_ID_REGEX
     from .policy import apply_abstract_policy, resolve_policy
     policy = resolve_policy(abstracts)
+    from . import ror as R
+    ror_cfg = R.resolve_config(ror)
+    if ror_cfg["enabled"]:
+        R.set_overrides(R.load_overrides(ror_cfg.get("overrides")))
     done = set() if reprocess else {r[0] for r in conn.execute("SELECT raw_key FROM ingested")}
     stats = {"new": 0, "changed": 0, "same": 0, "pages": 0, "bad_pages": 0}
     for key in store.list("raw/%s/" % source):
@@ -131,6 +135,8 @@ def ingest(store, conn, source, kind, native_prefix=None, id_regex=None, now=Non
             for r in gen:
                 if r.get("work"):
                     apply_abstract_policy(r["work"], source, policy)
+                    if ror_cfg["enabled"]:
+                        R.apply_ror(r["work"], conn, ror_cfg)   # キャッシュ参照のみ（通信しない）
                 if r.pop("_screen", False):
                     # 検索画面形式はREST v2より項目が少ない。REST由来の記録がある場合は上書きしない
                     old = conn.execute("SELECT raw_key FROM records WHERE identifier=?", (r["identifier"],)).fetchone()
