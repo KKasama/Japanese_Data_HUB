@@ -285,6 +285,14 @@ def normalize_jalc(rec):
     w["type_raw"] = "/".join(x for x in (ct, rec.get("article_type")) if x)
     w["resource_type"], w["resource_kind"] = rec.get("resource_type"), rec.get("resource_kind")
     w["type"] = {"JA": "article", "BK": "book", "RD": "dataset", "EL": "other", "GD": "other"}.get(ct)
+    # 会議録の検出: ジャーナル名に会議・講演関連キーワードがあれば conference-paper に上書き
+    if w["type"] == "article":
+        journal_title = " ".join(
+            j.get("journal_title_name", "") for j in rec.get("journal_title_name_list") or []
+        ).lower()
+        if any(k in journal_title for k in
+               ("meeting", "conference", "proceedings", "講演会", "講演予稿", "学術講演", "シンポジウム")):
+            w["type"] = "conference-paper"
     if rec.get("siteId") == "SI/JST.preprint":        # Jxiv（プレプリント）
         w["type"] = "preprint"
     w["content_type"] = ct

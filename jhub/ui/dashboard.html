@@ -225,9 +225,13 @@
   </div>
 
   <!-- Data Sources -->
-  <div class="section-label"><span data-lang="en">Priority Data Sources</span><span data-lang="ja">優先データソース一覧</span></div>
+  <div class="section-label"><span data-lang="en">JaLC Sub-sources — Priority Harvest Targets</span><span data-lang="ja">JaLC サブソース（優先ハーベスト対象）</span></div>
+  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 16px;margin-bottom:12px;font-size:12px;color:#1e40af;">
+    <strong>🔗 <span data-lang="en">All sub-sources are registered within JaLC — harvested via a single OAI-PMH/REST endpoint: <code>https://api.japanlinkcenter.org/v2/oai</code></span><span data-lang="ja">下記サブソースはすべてJaLC内に登録されており、単一のOAI-PMH/RESTエンドポイント経由で収集します：<code>https://api.japanlinkcenter.org/v2/oai</code></span></strong>
+  </div>
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:20px;">
     <div class="source-card jstage">
+      <div style="font-size:10px;color:#2563eb;font-weight:700;margin-bottom:4px;">▶ JaLC (JST)</div>
       <div class="source-name">J-STAGE</div>
       <div class="source-siteid">SI/JST.JSTAGE</div>
       <div style="font-size:12px;color:#718096;margin-bottom:8px;">
@@ -260,6 +264,7 @@
       </div>
     </div>
     <div class="source-card jstage-data">
+      <div style="font-size:10px;color:#2563eb;font-weight:700;margin-bottom:4px;">▶ JaLC (JST)</div>
       <div class="source-name">J-STAGE Data</div>
       <div class="source-siteid">SI/JST.JSTAGE_Data</div>
       <div style="font-size:12px;color:#718096;margin-bottom:8px;">
@@ -271,6 +276,7 @@
       <div class="type-badge dataset">dataset</div>
     </div>
     <div class="source-card jxiv">
+      <div style="font-size:10px;color:#2563eb;font-weight:700;margin-bottom:4px;">▶ JaLC (JST)</div>
       <div class="source-name">Jxiv</div>
       <div class="source-siteid">SI/JST.preprint</div>
       <div style="font-size:12px;color:#718096;margin-bottom:8px;">
@@ -282,6 +288,7 @@
       <div class="type-badge preprint">preprint</div>
     </div>
     <div class="source-card ndl">
+      <div style="font-size:10px;color:#2563eb;font-weight:700;margin-bottom:4px;">▶ JaLC (NDL)</div>
       <div class="source-name">NDL</div>
       <div class="source-siteid">SI/NDL.NDL.Search</div>
       <div style="font-size:12px;color:#718096;margin-bottom:8px;">
@@ -293,11 +300,12 @@
       <div class="type-badge book">book / report / other</div>
     </div>
     <div class="source-card other">
-      <div class="source-name"><span data-lang="en">Specialized</span><span data-lang="ja">専門機関</span></div>
-      <div class="source-siteid"><span data-lang="en">Multiple siteIds</span><span data-lang="ja">複数siteId</span></div>
-      <div style="font-size:12px;color:#718096;margin-bottom:8px;">NIMS · JAEA · RIKEN<br>NICT · <span data-lang="en">Ichushi-kai</span><span data-lang="ja">いちょう会</span></div>
+      <div style="font-size:10px;color:#2563eb;font-weight:700;margin-bottom:4px;">▶ JaLC (NII · NIMS · etc.)</div>
+      <div class="source-name"><span data-lang="en">IRDB + Specialized</span><span data-lang="ja">IRDB + 専門機関</span></div>
+      <div class="source-siteid"><span data-lang="en">SI/NII.JAIRO + others</span><span data-lang="ja">SI/NII.JAIRO 他</span></div>
+      <div style="font-size:12px;color:#718096;margin-bottom:8px;"><span data-lang="en">NII (IRDB) · NIMS · JAEA<br>RIKEN · NICT · 88 regular members</span><span data-lang="ja">NII（IRDB）· NIMS · JAEA<br>RIKEN · NICT · 正会員88機関</span></div>
       <div class="source-stat">RD · EL</div>
-      <div class="source-stat-label"><span data-lang="en">Materials · Nuclear · Life Sci</span><span data-lang="ja">材料科学・原子力・生命科学</span></div>
+      <div class="source-stat-label"><span data-lang="en">IR · Materials · Nuclear · Life Sci</span><span data-lang="ja">機関リポジトリ・材料・原子力・生命科学</span></div>
       <div class="type-badge other">dataset / other</div>
     </div>
   </div>
