@@ -97,14 +97,8 @@ code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:12px;wor
 </nav>
 <main>
 
-<section id="dash" class="on">
-  <div class="grid kpis" id="kpis"></div>
-  <div class="grid cols" style="margin-top:12px">
-    <div class="card"><h2>データ源・サイト別（件数）</h2><div class="bars" id="bars-site"></div></div>
-    <div class="card"><h2>種別</h2><div class="bars" id="bars-type"></div></div>
-    <div class="card"><h2>出版年の分布</h2><div id="chart-year"></div></div>
-    <div class="card"><h2>取り込み日ごとの件数（直近30日）</h2><div class="bars" id="bars-day"></div></div>
-  </div>
+<section id="dash" class="on" style="padding:0;margin:-16px">
+  <iframe src="dashboard.html" style="width:100%;height:calc(100vh - 88px);border:none;display:block;" title="Japanese Data Hub Dashboard"></iframe>
 </section>
 
 <section id="search">

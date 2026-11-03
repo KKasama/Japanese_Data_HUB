@@ -474,6 +474,10 @@ def make_handler(hub):
                 p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui", "index.html")
                 with open(p, encoding="utf-8") as f:
                     self._send(200, "text/html; charset=utf-8", f.read())
+            elif u.path == "/dashboard.html":
+                p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ui", "dashboard.html")
+                with open(p, encoding="utf-8") as f:
+                    self._send(200, "text/html; charset=utf-8", f.read())
             elif u.path == "/health":
                 self._send(200, "application/json", '{"status":"ok"}')
             elif u.path.startswith("/api/"):
