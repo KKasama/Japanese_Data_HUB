@@ -9,18 +9,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Hiragino Sans', 'Yu Gothic UI', 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; }
 
-  /* Language toggle */
-  .lang-toggle {
-    display: flex; gap: 0; border-radius: 8px; overflow: hidden;
-    border: 2px solid rgba(255,255,255,0.5);
-  }
-  .lang-btn {
-    padding: 7px 20px; font-size: 13px; font-weight: 700; cursor: pointer;
-    border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7);
-    transition: all 0.2s; letter-spacing: 0.5px;
-  }
-  .lang-btn.active { background: white; color: #1a3a5c; }
-  .lang-btn:hover:not(.active) { background: rgba(255,255,255,0.25); color: white; }
+  /* Language toggle — hidden: controlled by parent index.html */
+  .lang-toggle { display: none; }
 
   /* i18n: hide/show by lang */
   [data-lang="ja"] { display: none; }
@@ -686,6 +676,13 @@ function renderChart(lang) {
 }
 
 renderChart('en');
+
+// Listen for language change from parent index.html
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'setLang' && (e.data.lang === 'ja' || e.data.lang === 'en')) {
+    setLang(e.data.lang);
+  }
+});
 </script>
 </body>
 </html>

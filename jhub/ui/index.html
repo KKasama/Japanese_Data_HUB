@@ -24,12 +24,18 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 -apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif}
-header{background:var(--panel);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header{background:var(--panel);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 header h1{font-size:16px;margin:0;font-weight:700}
 header .sub{color:var(--mute);font-size:12px}
 header .sp{flex:1}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mute);margin-right:6px}
 .dot.ok{background:var(--ok)} .dot.bad{background:var(--bad)}
+/* Language toggle */
+.lang-toggle{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--line);margin-left:8px}
+.lang-btn{border:0;background:none;color:var(--mute);padding:4px 11px;cursor:pointer;font:600 12px inherit;border-right:1px solid var(--line);transition:all .15s}
+.lang-btn:last-child{border-right:0}
+.lang-btn.active{background:var(--accent);color:var(--accent-ink)}
+.lang-btn:not(.active):hover{background:var(--code);color:var(--ink)}
 nav{display:flex;gap:2px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto}
 nav button{border:0;background:none;color:var(--mute);padding:10px 14px;cursor:pointer;font:inherit;border-bottom:2px solid transparent;white-space:nowrap}
 nav button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
@@ -83,96 +89,121 @@ code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:12px;wor
 </head>
 <body>
 <header>
-  <h1>日本版研究情報ハブ <span class="sub">試作 v0.1</span></h1>
+  <h1 data-i18n="h1">日本版研究情報ハブ</h1><span class="sub">試作 v0.1</span>
   <span class="sub" id="hdr-last"></span>
   <span class="sp"></span>
-  <span class="sub"><span class="dot" id="hdr-dot"></span><span id="hdr-health">確認中</span></span>
+  <span class="sub"><span class="dot" id="hdr-dot"></span><span id="hdr-health" data-i18n="health-checking">確認中</span></span>
+  <div class="lang-toggle">
+    <button class="lang-btn active" id="btn-ja" onclick="setLang('ja')">日本語</button>
+    <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+  </div>
 </header>
 <nav role="tablist">
-  <button role="tab" data-tab="dash" aria-selected="true">ダッシュボード</button>
-  <button role="tab" data-tab="search" aria-selected="false">検索・閲覧</button>
-  <button role="tab" data-tab="jnl" aria-selected="false">ジャーナル</button>
-  <button role="tab" data-tab="dl" aria-selected="false">ダウンロード</button>
-  <button role="tab" data-tab="status" aria-selected="false">収集状況</button>
+  <button role="tab" data-tab="dash" aria-selected="true" data-i18n="tab-dash">ダッシュボード</button>
+  <button role="tab" data-tab="search" aria-selected="false" data-i18n="tab-search">検索・閲覧</button>
+  <button role="tab" data-tab="jnl" aria-selected="false" data-i18n="tab-jnl">ジャーナル</button>
+  <button role="tab" data-tab="dl" aria-selected="false" data-i18n="tab-dl">ダウンロード</button>
+  <button role="tab" data-tab="status" aria-selected="false" data-i18n="tab-status">収集状況</button>
 </nav>
 <main>
 
 <section id="dash" class="on" style="padding:0;margin:-16px">
-  <iframe src="dashboard.html" style="width:100%;height:calc(100vh - 88px);border:none;display:block;" title="Japanese Data Hub Dashboard"></iframe>
+  <iframe id="dash-iframe" src="dashboard.html" style="width:100%;height:calc(100vh - 88px);border:none;display:block;" title="Japanese Data Hub Dashboard"></iframe>
 </section>
 
 <section id="search">
   <div class="card">
     <form class="filters" id="f-search">
-      <div><label>キーワード（タイトル・著者・DOI）<input name="q" placeholder="例: 環境 / 10.11162/…"></label></div>
-      <div><label>サイト<select name="site"><option value="">すべて</option></select></label></div>
-      <div><label>機関（IRDB）<select name="institution"><option value="">すべて</option></select></label></div>
-      <div><label>ジャーナル（ISSN）<input name="journal" placeholder="例: 1884-4375"></label></div>
-      <div><label>DOIプレフィックス<input name="doi_prefix" placeholder="例: 10.11162"></label></div>
-      <div><label>件数<select name="limit"><option>20</option><option>50</option><option>100</option></select></label></div>
-      <div><button class="btn" type="submit">検索</button> <button class="btn ghost" type="button" id="f-reset">クリア</button></div>
+      <div><label data-i18n="lbl-keyword">キーワード（タイトル・著者・DOI）<input name="q" data-i18n-ph="ph-keyword" placeholder="例: 環境 / 10.11162/…"></label></div>
+      <div><label data-i18n="lbl-site">サイト<select name="site"><option value="" data-i18n="opt-all">すべて</option></select></label></div>
+      <div><label data-i18n="lbl-inst">機関（IRDB）<select name="institution"><option value="" data-i18n="opt-all">すべて</option></select></label></div>
+      <div><label data-i18n="lbl-journal">ジャーナル（ISSN）<input name="journal" data-i18n-ph="ph-journal" placeholder="例: 1884-4375"></label></div>
+      <div><label data-i18n="lbl-doi-prefix">DOIプレフィックス<input name="doi_prefix" data-i18n-ph="ph-doi-prefix" placeholder="例: 10.11162"></label></div>
+      <div><label data-i18n="lbl-limit">件数<select name="limit"><option>20</option><option>50</option><option>100</option></select></label></div>
+      <div><button class="btn" type="submit" data-i18n="btn-search">検索</button> <button class="btn ghost" type="button" id="f-reset" data-i18n="btn-clear">クリア</button></div>
     </form>
   </div>
   <div class="card" style="margin-top:12px">
-    <div class="small mute" id="s-summary">検索すると結果が表示されます。</div>
-    <div style="overflow:auto"><table><thead><tr><th>タイトル</th><th>著者</th><th>年</th><th>ジャーナル</th><th>種別</th><th>更新</th></tr></thead><tbody id="s-body"></tbody></table></div>
-    <div class="pager"><button class="btn ghost" id="s-prev" disabled>前へ</button><button class="btn ghost" id="s-next" disabled>次へ</button><span class="small mute" id="s-page"></span></div>
+    <div class="small mute" id="s-summary" data-i18n="msg-search-init">検索すると結果が表示されます。</div>
+    <div style="overflow:auto"><table><thead><tr>
+      <th data-i18n="th-title">タイトル</th>
+      <th data-i18n="th-authors">著者</th>
+      <th data-i18n="th-year">年</th>
+      <th data-i18n="th-journal">ジャーナル</th>
+      <th data-i18n="th-type">種別</th>
+      <th data-i18n="th-updated">更新</th>
+    </tr></thead><tbody id="s-body"></tbody></table></div>
+    <div class="pager">
+      <button class="btn ghost" id="s-prev" disabled data-i18n="btn-prev">前へ</button>
+      <button class="btn ghost" id="s-next" disabled data-i18n="btn-next">次へ</button>
+      <span class="small mute" id="s-page"></span>
+    </div>
   </div>
 </section>
 
 <section id="jnl">
   <div class="card">
     <form class="filters" id="f-jnl">
-      <div><label>ジャーナル名・ISSN<input name="q" placeholder="例: 環境 / 1884-4375"></label></div>
-      <div><label>サイト<select name="site"><option value="">すべて</option></select></label></div>
-      <div><button class="btn" type="submit">絞り込み</button></div>
+      <div><label data-i18n="lbl-jnl-q">ジャーナル名・ISSN<input name="q" data-i18n-ph="ph-jnl-q" placeholder="例: 環境 / 1884-4375"></label></div>
+      <div><label data-i18n="lbl-site">サイト<select name="site"><option value="" data-i18n="opt-all">すべて</option></select></label></div>
+      <div><button class="btn" type="submit" data-i18n="btn-filter">絞り込み</button></div>
     </form>
   </div>
   <div class="card" style="margin-top:12px">
-    <div class="small mute" id="j-summary">読み込み中…</div>
-    <div style="overflow:auto"><table><thead><tr><th>ジャーナル</th><th>ISSN（キー）</th><th>DOIプレフィックス</th><th>件数</th><th></th></tr></thead><tbody id="j-body"></tbody></table></div>
-    <div class="small mute" style="margin-top:8px">ジャーナルごとのファイルは、コマンド <code>python3 -m jhub export --by journal --out export_jnl</code> でも書き出せます（1ジャーナル＝1ファイル、一覧は manifest.json）。</div>
+    <div class="small mute" id="j-summary" data-i18n="jnl-loading">読み込み中…</div>
+    <div style="overflow:auto"><table><thead><tr>
+      <th data-i18n="th-jnl-name">ジャーナル</th>
+      <th data-i18n="th-jnl-issn">ISSN（キー）</th>
+      <th data-i18n="th-jnl-prefix">DOIプレフィックス</th>
+      <th data-i18n="th-jnl-count">件数</th>
+      <th></th>
+    </tr></thead><tbody id="j-body"></tbody></table></div>
+    <div class="small mute" id="jnl-export-note" style="margin-top:8px">ジャーナルごとのファイルは、コマンド <code>python3 -m jhub export --by journal --out export_jnl</code> でも書き出せます（1ジャーナル＝1ファイル、一覧は manifest.json）。</div>
   </div>
 </section>
 
 <section id="dl">
   <div class="grid cols">
     <div class="card">
-      <h2>条件を指定してファイルに保存</h2>
-      <p class="small mute" style="margin-top:0">「検索・閲覧」タブで指定した条件（キーワード・サイト・機関など）が使われます。ブラウザがAPIを順に呼び出して、1つのファイルにまとめます。</p>
-      <div class="small">現在の条件: <span id="dl-cond" class="mute">（なし：すべて）</span></div>
+      <h2 data-i18n="h2-dl-filter">条件を指定してファイルに保存</h2>
+      <p class="small mute" style="margin-top:0" data-i18n="dl-desc">「検索・閲覧」タブで指定した条件（キーワード・サイト・機関など）が使われます。ブラウザがAPIを順に呼び出して、1つのファイルにまとめます。</p>
+      <div class="small"><span data-i18n="dl-cond-label">現在の条件: </span><span id="dl-cond" class="mute">（なし：すべて）</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-        <label>形式<select id="dl-fmt"><option value="jsonl">JSONL（1行1件）</option><option value="json">JSON</option><option value="csv">CSV（主な項目）</option></select></label>
-        <label>最大件数<select id="dl-max"><option>100</option><option>1000</option><option selected>5000</option><option>20000</option></select></label>
+        <label data-i18n="lbl-fmt">形式<select id="dl-fmt">
+          <option value="jsonl" data-i18n="fmt-jsonl">JSONL（1行1件）</option>
+          <option value="json" data-i18n="fmt-json">JSON</option>
+          <option value="csv" data-i18n="fmt-csv">CSV（主な項目）</option>
+        </select></label>
+        <label data-i18n="lbl-max">最大件数<select id="dl-max"><option>100</option><option>1000</option><option selected>5000</option><option>20000</option></select></label>
       </div>
-      <div style="margin-top:12px"><button class="btn" id="dl-go">ダウンロード</button> <button class="btn ghost" id="dl-cancel" disabled>中止</button></div>
+      <div style="margin-top:12px"><button class="btn" id="dl-go" data-i18n="btn-dl">ダウンロード</button> <button class="btn ghost" id="dl-cancel" disabled data-i18n="btn-cancel">中止</button></div>
       <div class="progress"><div id="dl-bar"></div></div>
       <div class="small mute" id="dl-msg" style="margin-top:6px"></div>
     </div>
     <div class="card">
-      <h2>プログラムから取得する（API）</h2>
-      <p class="small mute" style="margin-top:0">同じデータを、他のシステムから取得できます。次のURLは、現在の条件を反映しています。</p>
-      <div class="small">JSON API</div><pre id="api-url"></pre>
-      <div class="small" style="margin-top:8px">curl の例</div><pre id="api-curl"></pre>
-      <div class="small" style="margin-top:8px">OAI-PMH（ハーベスター向け）</div>
+      <h2 data-i18n="h2-api">プログラムから取得する（API）</h2>
+      <p class="small mute" style="margin-top:0" data-i18n="api-desc">同じデータを、他のシステムから取得できます。次のURLは、現在の条件を反映しています。</p>
+      <div class="small" data-i18n="api-json">JSON API</div><pre id="api-url"></pre>
+      <div class="small" style="margin-top:8px" data-i18n="api-curl">curl の例</div><pre id="api-curl"></pre>
+      <div class="small" style="margin-top:8px" data-i18n="api-oai">OAI-PMH（ハーベスター向け）</div>
       <ul class="small">
-        <li><a id="oai-id" target="_blank" rel="noopener">Identify</a></li>
-        <li><a id="oai-sets" target="_blank" rel="noopener">ListSets（セット一覧）</a></li>
-        <li><a id="oai-recs" target="_blank" rel="noopener">ListRecords（整形済み、先頭ページ）</a></li>
+        <li><a id="oai-id" target="_blank" rel="noopener" data-i18n="oai-id">Identify</a></li>
+        <li><a id="oai-sets" target="_blank" rel="noopener" data-i18n="oai-sets">ListSets（セット一覧）</a></li>
+        <li><a id="oai-recs" target="_blank" rel="noopener" data-i18n="oai-recs">ListRecords（整形済み、先頭ページ）</a></li>
       </ul>
-      <div class="note">差分取得は、APIでは <code>from=2026-10-01T00:00:00Z</code>、OAI-PMHでは <code>&amp;from=…</code> で指定できます。</div>
+      <div class="note" id="oai-note">差分取得は、APIでは <code>from=2026-10-01T00:00:00Z</code>、OAI-PMHでは <code>&amp;from=…</code> で指定できます。</div>
     </div>
   </div>
 </section>
 
 <section id="status">
   <div class="grid cols" id="st-cards"></div>
-  <div class="card" style="margin-top:12px"><h2>セット一覧（OAI-PMHで絞り込める単位）</h2><div class="small mute">機関・サイト・ジャーナル・プレフィックスごとに、別々に取得できます。</div><div id="sets" class="small" style="margin-top:8px"></div></div>
+  <div class="card" style="margin-top:12px"><h2 data-i18n="h2-sets">セット一覧（OAI-PMHで絞り込める単位）</h2><div class="small mute" data-i18n="sets-desc">機関・サイト・ジャーナル・プレフィックスごとに、別々に取得できます。</div><div id="sets" class="small" style="margin-top:8px"></div></div>
 </section>
 </main>
 
 <dialog id="dlg">
-  <div class="dh"><h3 id="dlg-title">詳細</h3><button class="btn ghost" id="dlg-close">閉じる</button></div>
+  <div class="dh"><h3 id="dlg-title">詳細</h3><button class="btn ghost" id="dlg-close" data-i18n="dlg-close">閉じる</button></div>
   <div class="db" id="dlg-body"></div>
 </dialog>
 
@@ -184,7 +215,132 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const num = n => (n ?? 0).toLocaleString("ja-JP");
 const api = async (p) => { const r = await fetch(p); const j = await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.error || r.status); return j; };
 
-// ---------- タブ ----------
+// ── i18n ───────────────────────────────────────────────────────────────────
+const I18N = {
+  ja: {
+    'h1': '日本版研究情報ハブ',
+    'tab-dash': 'ダッシュボード', 'tab-search': '検索・閲覧', 'tab-jnl': 'ジャーナル',
+    'tab-dl': 'ダウンロード', 'tab-status': '収集状況',
+    'health-checking': '確認中', 'health-ok': '稼働中', 'health-err': '接続できません',
+    'lbl-keyword': 'キーワード（タイトル・著者・DOI）', 'ph-keyword': '例: 環境 / 10.11162/…',
+    'lbl-site': 'サイト', 'opt-all': 'すべて',
+    'lbl-inst': '機関（IRDB）', 'lbl-journal': 'ジャーナル（ISSN）', 'ph-journal': '例: 1884-4375',
+    'lbl-doi-prefix': 'DOIプレフィックス', 'ph-doi-prefix': '例: 10.11162',
+    'lbl-limit': '件数', 'btn-search': '検索', 'btn-clear': 'クリア',
+    'th-title': 'タイトル', 'th-authors': '著者', 'th-year': '年',
+    'th-journal': 'ジャーナル', 'th-type': '種別', 'th-updated': '更新',
+    'msg-search-init': '検索すると結果が表示されます。',
+    'btn-prev': '前へ', 'btn-next': '次へ',
+    'lbl-jnl-q': 'ジャーナル名・ISSN', 'ph-jnl-q': '例: 環境 / 1884-4375',
+    'btn-filter': '絞り込み',
+    'th-jnl-name': 'ジャーナル', 'th-jnl-issn': 'ISSN（キー）',
+    'th-jnl-prefix': 'DOIプレフィックス', 'th-jnl-count': '件数',
+    'jnl-loading': '読み込み中…',
+    'h2-dl-filter': '条件を指定してファイルに保存',
+    'dl-desc': '「検索・閲覧」タブで指定した条件（キーワード・サイト・機関など）が使われます。ブラウザがAPIを順に呼び出して、1つのファイルにまとめます。',
+    'dl-cond-label': '現在の条件: ', 'dl-no-cond': '（なし：すべて）',
+    'lbl-fmt': '形式', 'fmt-jsonl': 'JSONL（1行1件）', 'fmt-json': 'JSON', 'fmt-csv': 'CSV（主な項目）',
+    'lbl-max': '最大件数', 'btn-dl': 'ダウンロード', 'btn-cancel': '中止',
+    'h2-api': 'プログラムから取得する（API）',
+    'api-desc': '同じデータを、他のシステムから取得できます。次のURLは、現在の条件を反映しています。',
+    'api-json': 'JSON API', 'api-curl': 'curl の例', 'api-oai': 'OAI-PMH（ハーベスター向け）',
+    'oai-id': 'Identify', 'oai-sets': 'ListSets（セット一覧）', 'oai-recs': 'ListRecords（整形済み、先頭ページ）',
+    'h2-sets': 'セット一覧（OAI-PMHで絞り込める単位）',
+    'sets-desc': '機関・サイト・ジャーナル・プレフィックスごとに、別々に取得できます。',
+    'dlg-close': '閉じる',
+  },
+  en: {
+    'h1': 'Japanese Data Hub',
+    'tab-dash': 'Dashboard', 'tab-search': 'Search', 'tab-jnl': 'Journals',
+    'tab-dl': 'Download', 'tab-status': 'Harvest Status',
+    'health-checking': 'Checking', 'health-ok': 'Online', 'health-err': 'Cannot connect',
+    'lbl-keyword': 'Keyword (Title / Author / DOI)', 'ph-keyword': 'e.g. 環境 / 10.11162/…',
+    'lbl-site': 'Site', 'opt-all': 'All',
+    'lbl-inst': 'Institution (IRDB)', 'lbl-journal': 'Journal (ISSN)', 'ph-journal': 'e.g. 1884-4375',
+    'lbl-doi-prefix': 'DOI Prefix', 'ph-doi-prefix': 'e.g. 10.11162',
+    'lbl-limit': 'Limit', 'btn-search': 'Search', 'btn-clear': 'Clear',
+    'th-title': 'Title', 'th-authors': 'Authors', 'th-year': 'Year',
+    'th-journal': 'Journal', 'th-type': 'Type', 'th-updated': 'Updated',
+    'msg-search-init': 'Results will appear here after a search.',
+    'btn-prev': 'Prev', 'btn-next': 'Next',
+    'lbl-jnl-q': 'Journal name / ISSN', 'ph-jnl-q': 'e.g. 環境 / 1884-4375',
+    'btn-filter': 'Filter',
+    'th-jnl-name': 'Journal', 'th-jnl-issn': 'ISSN (key)',
+    'th-jnl-prefix': 'DOI Prefix', 'th-jnl-count': 'Records',
+    'jnl-loading': 'Loading…',
+    'h2-dl-filter': 'Save to file with filters',
+    'dl-desc': 'Filters set in the Search tab (keyword, site, institution, etc.) are applied. The browser calls the API sequentially and assembles results into a single file.',
+    'dl-cond-label': 'Current filter: ', 'dl-no-cond': '(none: all records)',
+    'lbl-fmt': 'Format', 'fmt-jsonl': 'JSONL (one record per line)', 'fmt-json': 'JSON', 'fmt-csv': 'CSV (key fields)',
+    'lbl-max': 'Max records', 'btn-dl': 'Download', 'btn-cancel': 'Cancel',
+    'h2-api': 'Access via API',
+    'api-desc': 'The same data can be retrieved by other systems. The URLs below reflect the current filters.',
+    'api-json': 'JSON API', 'api-curl': 'curl example', 'api-oai': 'OAI-PMH (for harvesters)',
+    'oai-id': 'Identify', 'oai-sets': 'ListSets', 'oai-recs': 'ListRecords (formatted, first page)',
+    'h2-sets': 'OAI-PMH Sets (filterable units)',
+    'sets-desc': 'Retrieve separately by institution, site, journal, or DOI prefix.',
+    'dlg-close': 'Close',
+  }
+};
+
+let LANG = 'ja';
+
+function t(key){ return (I18N[LANG] || I18N.ja)[key] || key; }
+
+function applyLang(lang){
+  LANG = lang;
+  document.documentElement.lang = lang;
+  // Update toggle buttons
+  $('#btn-ja').classList.toggle('active', lang === 'ja');
+  $('#btn-en').classList.toggle('active', lang === 'en');
+  // Update all data-i18n elements (textContent)
+  $$('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    const val = t(key);
+    // For label elements, only replace the text node (first child) to preserve nested inputs/selects
+    if(el.tagName === 'LABEL'){
+      // Find or create the first text node
+      const firstNode = [...el.childNodes].find(n => n.nodeType === 3);
+      if(firstNode) firstNode.textContent = val;
+      else el.prepend(document.createTextNode(val));
+    } else {
+      el.textContent = val;
+    }
+  });
+  // Update placeholder attributes
+  $$('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  // Update <option> elements with data-i18n
+  $$('option[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  // Update download section no-cond text
+  if(!$('#dl-cond').dataset.custom) $('#dl-cond').textContent = t('dl-no-cond');
+  // Update OAI note HTML
+  const oaiNote = $('#oai-note');
+  if(oaiNote){
+    oaiNote.innerHTML = lang === 'en'
+      ? 'For incremental harvesting: use <code>from=2026-10-01T00:00:00Z</code> in the API, or <code>&amp;from=…</code> in OAI-PMH.'
+      : '差分取得は、APIでは <code>from=2026-10-01T00:00:00Z</code>、OAI-PMHでは <code>&amp;from=…</code> で指定できます。';
+  }
+  // Update journal export note
+  const jnlNote = $('#jnl-export-note');
+  if(jnlNote){
+    jnlNote.innerHTML = lang === 'en'
+      ? 'Per-journal files can also be exported via the command <code>python3 -m jhub export --by journal --out export_jnl</code> (1 file per journal, index in manifest.json).'
+      : 'ジャーナルごとのファイルは、コマンド <code>python3 -m jhub export --by journal --out export_jnl</code> でも書き出せます（1ジャーナル＝1ファイル、一覧は manifest.json）。';
+  }
+  // Update health status text if already set
+  const healthEl = $('#hdr-health');
+  if(healthEl.dataset.state === 'ok') healthEl.textContent = t('health-ok');
+  else if(healthEl.dataset.state === 'err') healthEl.textContent = t('health-err');
+  // Post message to dashboard iframe
+  try{
+    const ifrm = $('#dash-iframe');
+    if(ifrm && ifrm.contentWindow) ifrm.contentWindow.postMessage({type:'setLang', lang}, '*');
+  }catch(e){}
+}
+
+function setLang(lang){ applyLang(lang); }
+
+// ── タブ ──────────────────────────────────────────────────────────────────
 function showTab(id){
   $$("nav button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab===id));
   $$("main section").forEach(s => s.classList.toggle("on", s.id===id));
@@ -195,7 +351,7 @@ function showTab(id){
 }
 $$("nav button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
 
-// ---------- ダッシュボード ----------
+// ── ダッシュボード ────────────────────────────────────────────────────────
 function bars(el, obj, max){
   const e = Object.entries(obj); if(!e.length){ el.innerHTML='<span class="mute">データがありません</span>'; return; }
   const m = max || Math.max(...e.map(x=>x[1]));
@@ -213,10 +369,10 @@ async function loadDash(){
     $("#chart-year").innerHTML = '<div class="cols-chart">'+ys.map(([y,v])=>`<div title="${esc(y)}年: ${num(v)}件" style="height:${Math.max(2,v/m*100)}%"></div>`).join("")+'</div><div class="axis"><span>'+esc(ys[0][0])+'</span><span>'+esc(ys[ys.length-1][0])+'</span></div>';
   } else $("#chart-year").innerHTML='<span class="mute">データがありません</span>';
   bars($("#bars-day"), s.by_day);
-  $("#hdr-last").textContent = s.last_update ? "最終更新 " + s.last_update : "";
+  $("#hdr-last").textContent = s.last_update ? (LANG==='en'?"Last updated ":"最終更新 ") + s.last_update : "";
 }
 
-// ---------- 検索・閲覧 ----------
+// ── 検索・閲覧 ────────────────────────────────────────────────────────────
 let stack = [""], page = 0, nextCursor = null, lastTotal = 0;
 function formParams(){
   const fd = new FormData($("#f-search")), p = new URLSearchParams();
@@ -227,24 +383,24 @@ function authorsOf(w){ return (w.authorships||[]).slice(0,3).map(a=>a.raw_author
 async function doSearch(cursorIdx){
   const p = formParams(); p.set("limit", $("#f-search").limit.value);
   if(stack[cursorIdx]) p.set("cursor", stack[cursorIdx]);
-  $("#s-summary").textContent = "検索中…";
+  $("#s-summary").textContent = LANG==='en'?"Searching…":"検索中…";
   try{
     const r = await api("/api/works?"+p);
     page = cursorIdx; nextCursor = r.next_cursor; lastTotal = r.total;
     const lim = +$("#f-search").limit.value;
-    $("#s-summary").textContent = `${num(r.total)}件が見つかりました`;
+    $("#s-summary").textContent = LANG==='en'?`${num(r.total)} results found`:`${num(r.total)}件が見つかりました`;
     $("#s-body").innerHTML = r.results.map(x => {
       const w = x.work || {};
       return `<tr data-id="${esc(x.identifier)}"><td>${esc(w.display_name||w.title||x.identifier)}</td><td>${esc(authorsOf(w))}</td><td>${esc(w.publication_year??"")}</td><td>${esc(w.journal_title||"")}</td><td><span class="tag">${esc(x.source)}</span>${esc(w.type||"")}</td><td class="mute small">${esc((x.updated||"").slice(0,10))}</td></tr>`;
-    }).join("") || '<tr><td colspan="6" class="mute">該当なし</td></tr>';
+    }).join("") || `<tr><td colspan="6" class="mute">${LANG==='en'?'No results':'該当なし'}</td></tr>`;
     $("#s-prev").disabled = page===0;
     $("#s-next").disabled = !nextCursor;
-    $("#s-page").textContent = r.total ? `${page*lim+1}–${page*lim+r.results.length}件目` : "";
+    $("#s-page").textContent = r.total ? `${page*lim+1}–${page*lim+r.results.length}${LANG==='en'?' of '+num(r.total):'件目'}` : "";
     $$("#s-body tr[data-id]").forEach(tr => tr.onclick = () => openDetail(tr.dataset.id));
-  }catch(e){ $("#s-summary").textContent = "エラー: "+e.message; }
+  }catch(e){ $("#s-summary").textContent = (LANG==='en'?"Error: ":"エラー: ")+e.message; }
 }
 $("#f-search").onsubmit = e => { e.preventDefault(); stack=[""]; doSearch(0); renderDlInfo(); };
-$("#f-reset").onclick = () => { $("#f-search").reset(); stack=[""]; $("#s-body").innerHTML=""; $("#s-summary").textContent="検索すると結果が表示されます。"; renderDlInfo(); };
+$("#f-reset").onclick = () => { $("#f-search").reset(); stack=[""]; $("#s-body").innerHTML=""; $("#s-summary").textContent=t('msg-search-init'); renderDlInfo(); };
 $("#s-next").onclick = () => { stack[page+1] = nextCursor; doSearch(page+1); };
 $("#s-prev").onclick = () => doSearch(page-1);
 
@@ -252,72 +408,81 @@ async function loadFilters(){
   try{
     const [a,b] = await Promise.all([api("/api/sites"), api("/api/institutions")]);
     window.INST = {}; b.institutions.forEach(x=>{ window.INST[x.code]=x.name_ja; });
-    $("#f-jnl").site.innerHTML += a.sites.map(x=>`<option value="${esc(x.site_id)}">${esc(x.site_id)}（${num(x.records)}）</option>`).join("");
-    $("#f-search").site.innerHTML += a.sites.map(x=>`<option value="${esc(x.site_id)}">${esc(x.site_id)}（${num(x.records)}）</option>`).join("");
-    $("#f-search").institution.innerHTML += b.institutions.map(x=>`<option value="${esc(x.code)}">${esc(x.name_ja?x.name_ja+"（"+x.code+"）":x.code)}（${num(x.records)}）</option>`).join("");
+    const siteOpts = a.sites.map(x=>`<option value="${esc(x.site_id)}">${esc(x.site_id)}（${num(x.records)}）</option>`).join("");
+    $("#f-jnl").site.innerHTML = `<option value="">${t('opt-all')}</option>` + siteOpts;
+    $("#f-search").site.innerHTML = `<option value="">${t('opt-all')}</option>` + siteOpts;
+    $("#f-search").institution.innerHTML = `<option value="">${t('opt-all')}</option>` + b.institutions.map(x=>`<option value="${esc(x.code)}">${esc(x.name_ja?x.name_ja+"（"+x.code+"）":x.code)}（${num(x.records)}）</option>`).join("");
   }catch(e){}
 }
 
-// ---------- ジャーナル一覧 ----------
+// ── ジャーナル一覧 ────────────────────────────────────────────────────────
 async function loadJournals(){
   const f = $("#f-jnl"), p = new URLSearchParams();
   if(f.q.value.trim()) p.set("q", f.q.value.trim());
   if(f.site.value) p.set("site", f.site.value);
   p.set("limit","200");
-  $("#j-summary").textContent = "読み込み中…";
+  $("#j-summary").textContent = t('jnl-loading');
   try{
     const r = await api("/api/journals?"+p);
-    $("#j-summary").textContent = `${num(r.total)}誌（件数の多い順に${num(r.journals.length)}誌を表示）`;
-    $("#j-body").innerHTML = r.journals.map(j => `<tr style="cursor:default"><td>${esc(j.title||"(名称なし)")}</td><td><code>${esc(j.key)}</code></td><td>${esc(j.doi_prefix||"")}${j.doi_prefixes>1?` <span class="tag">他${j.doi_prefixes-1}</span>`:""}</td><td>${num(j.records)}</td><td style="white-space:nowrap"><button class="btn ghost" data-act="view" data-k="${esc(j.key)}">論文を見る</button> <button class="btn ghost" data-act="dl" data-k="${esc(j.key)}">取得</button></td></tr>`).join("") || '<tr><td colspan="5" class="mute">該当なし</td></tr>';
+    const sfx = LANG==='en'?` journals (top ${num(r.journals.length)} by count)`:`誌（件数の多い順に${num(r.journals.length)}誌を表示）`;
+    $("#j-summary").textContent = num(r.total)+sfx;
+    const viewTxt = LANG==='en'?'View':'論文を見る', dlTxt = LANG==='en'?'Get':'取得';
+    const otherTxt = LANG==='en'?' more':'他';
+    $("#j-body").innerHTML = r.journals.map(j => `<tr style="cursor:default"><td>${esc(j.title||"(名称なし)")}</td><td><code>${esc(j.key)}</code></td><td>${esc(j.doi_prefix||"")}${j.doi_prefixes>1?` <span class="tag">${otherTxt}${j.doi_prefixes-1}</span>`:""}</td><td>${num(j.records)}</td><td style="white-space:nowrap"><button class="btn ghost" data-act="view" data-k="${esc(j.key)}">${viewTxt}</button> <button class="btn ghost" data-act="dl" data-k="${esc(j.key)}">${dlTxt}</button></td></tr>`).join("") || `<tr><td colspan="5" class="mute">${LANG==='en'?'No results':'該当なし'}</td></tr>`;
     $$("#j-body button").forEach(b => b.onclick = () => {
       const fs = $("#f-search"); fs.reset(); fs.journal.value = b.dataset.k;
       if(b.dataset.act==="view"){ showTab("search"); stack=[""]; doSearch(0); }
       else { showTab("dl"); }
       renderDlInfo();
     });
-  }catch(e){ $("#j-summary").textContent = "エラー: "+e.message; }
+  }catch(e){ $("#j-summary").textContent = (LANG==='en'?"Error: ":"エラー: ")+e.message; }
 }
 $("#f-jnl").onsubmit = e => { e.preventDefault(); loadJournals(); };
 
-// ---------- 詳細 ----------
+// ── 詳細 ─────────────────────────────────────────────────────────────────
 function row(k,v){ return v===null||v===undefined||v===""||(Array.isArray(v)&&!v.length) ? "" : `<dt>${esc(k)}</dt><dd>${v}</dd>`; }
 async function openDetail(id){
-  const dlg = $("#dlg"); $("#dlg-title").textContent = id; $("#dlg-body").innerHTML = '<span class="mute">読み込み中…</span>'; if(!dlg.open) dlg.showModal();
+  const dlg = $("#dlg"); $("#dlg-title").textContent = id; $("#dlg-body").innerHTML = `<span class="mute">${LANG==='en'?'Loading…':'読み込み中…'}</span>`; if(!dlg.open) dlg.showModal();
   let rec, raw=null, rawErr=null;
-  try{ rec = await api("/api/works/"+encodeURIComponent(id)); }catch(e){ $("#dlg-body").textContent = "エラー: "+e.message; return; }
+  try{ rec = await api("/api/works/"+encodeURIComponent(id)); }catch(e){ $("#dlg-body").textContent = (LANG==='en'?"Error: ":"エラー: ")+e.message; return; }
   try{ raw = await api("/api/raw/"+encodeURIComponent(id)); }catch(e){ rawErr = e.message; }
   const w = rec.work || {};
   const au = (w.authorships||[]).map(a=>{ const o=(a.author&&a.author.orcid)||a.orcid; return esc(a.raw_author_name||"")+(o?` <span class="tag">ORCID</span>`:""); }).join("、");
-  function topicsHtml(a){ return (a.topics||[]).map((t,i)=>esc(t.display_name||t.name)+' <span class="mute">('+(t.score!=null?Number(t.score).toFixed(2):"")+')</span>').join("<br>")+'<div class="small mute">自動推定'+(a.method?'（'+esc(a.method)+'）':"")+'。参考情報です</div>'; }
+  function topicsHtml(a){ return (a.topics||[]).map((t2,i)=>esc(t2.display_name||t2.name)+' <span class="mute">('+(t2.score!=null?Number(t2.score).toFixed(2):"")+')</span>').join("<br>")+'<div class="small mute">'+(LANG==='en'?'Auto-estimated':'自動推定')+(a.method?'（'+esc(a.method)+'）':"")+(LANG==='en'?'. For reference only.':'。参考情報です')+'</div>'; }
+  const L = (ja, en) => LANG==='en' ? en : ja;
   const nice = '<dl>'+
-    row("タイトル", esc(w.title)) + row("英題", esc((w.titles||[]).filter(t=>t.lang==="en").map(t=>t.text).join(" / "))) +
-    row("著者", au) + row("DOI", w.doi?`<a href="${esc(w.doi)}" target="_blank" rel="noopener">${esc(w.doi)}</a>`:"") +
-    row("種別", esc(w.type)+(w.type_raw?` <span class="mute">(${esc(w.type_raw)})</span>`:"")) + row("出版年月日", esc(w.publication_date)) +
-    row("言語", esc(w.language)) + row("ジャーナル", esc(w.journal_title)+(w.journal_title_en?` / ${esc(w.journal_title_en)}`:"")) +
-    row("ISSN", esc((w.issn||[]).join(", "))) + row("巻号頁", esc(w.biblio?[w.biblio.volume&&"vol."+w.biblio.volume,w.biblio.issue&&"no."+w.biblio.issue,w.biblio.first_page&&(w.biblio.first_page+"–"+(w.biblio.last_page||""))].filter(Boolean).join(" "):"")) +
-    row("出版者", esc(w.publisher)) + row("キーワード", esc((w.keywords||[]).map(k=>k.keyword).join("、"))) +
-    row("OA", w.open_access&&w.open_access.is_oa!=null?esc(String(w.open_access.is_oa)):"") + row("助成", esc((w.grants||[]).map(g=>g.funder_display_name||g.award_id||JSON.stringify(g)).join("、"))) +
-    row("参考文献", w.references_count!=null?esc(w.references_count)+"件（DOI "+(w.referenced_dois||[]).length+"件）":"") +
-    row("分野（自動推定）", (rec.auto_topics?topicsHtml(rec.auto_topics):"")) +
-    row("抄録", abstractHtml(w)) +
-    row("サイト", esc(rec.site_id)) + row("機関", rec.institution_code?esc(((window.INST||{})[rec.institution_code]||"")+(((window.INST||{})[rec.institution_code])?"（":"")+rec.institution_code+(((window.INST||{})[rec.institution_code])?"）":"")):"") + row("ハブ更新日時", esc(rec.updated)) + '</dl>';
+    row(L("タイトル","Title"), esc(w.title)) + row(L("英題","EN Title"), esc((w.titles||[]).filter(t2=>t2.lang==="en").map(t2=>t2.text).join(" / "))) +
+    row(L("著者","Authors"), au) + row("DOI", w.doi?`<a href="${esc(w.doi)}" target="_blank" rel="noopener">${esc(w.doi)}</a>`:"") +
+    row(L("種別","Type"), esc(w.type)+(w.type_raw?` <span class="mute">(${esc(w.type_raw)})</span>`:"")) + row(L("出版年月日","Published"), esc(w.publication_date)) +
+    row(L("言語","Language"), esc(w.language)) + row(L("ジャーナル","Journal"), esc(w.journal_title)+(w.journal_title_en?` / ${esc(w.journal_title_en)}`:"")) +
+    row("ISSN", esc((w.issn||[]).join(", "))) + row(L("巻号頁","Volume"), esc(w.biblio?[w.biblio.volume&&"vol."+w.biblio.volume,w.biblio.issue&&"no."+w.biblio.issue,w.biblio.first_page&&(w.biblio.first_page+"–"+(w.biblio.last_page||""))].filter(Boolean).join(" "):"")) +
+    row(L("出版者","Publisher"), esc(w.publisher)) + row(L("キーワード","Keywords"), esc((w.keywords||[]).map(k2=>k2.keyword).join("、"))) +
+    row("OA", w.open_access&&w.open_access.is_oa!=null?esc(String(w.open_access.is_oa)):"") + row(L("助成","Grants"), esc((w.grants||[]).map(g=>g.funder_display_name||g.award_id||JSON.stringify(g)).join("、"))) +
+    row(L("参考文献","References"), w.references_count!=null?esc(w.references_count)+(LANG==='en'?" refs (DOI ":" 件（DOI ")+(w.referenced_dois||[]).length+(LANG==='en'?" items)"+"件）"):"") +
+    row(L("分野（自動推定）","Topics (auto)"), (rec.auto_topics?topicsHtml(rec.auto_topics):"")) +
+    row(L("抄録","Abstract"), abstractHtml(w)) +
+    row(L("サイト","Site"), esc(rec.site_id)) + row(L("機関","Institution"), rec.institution_code?esc(((window.INST||{})[rec.institution_code]||"")+(((window.INST||{})[rec.institution_code])?"（":"")+rec.institution_code+(((window.INST||{})[rec.institution_code])?"）":"")):"") + row(L("ハブ更新日時","Hub updated"), esc(rec.updated)) + '</dl>';
   const rawTxt = raw ? (raw.format==="xml" ? raw.raw : JSON.stringify(raw.raw,null,1)) : null;
+  const fmtLabel = LANG==='en'?"Formatted JSON (OpenAlex-compatible)":"整形後（OpenAlex互換のJSON）";
+  const rawLabel = LANG==='en'?"Raw data (as stored)":"原データ（保存した生データ）";
+  const rawErrMsg = LANG==='en'?"Cannot display raw data: ":"原データを表示できません: ";
+  const apiNote = LANG==='en'?"Retrieve via API: ":"APIで取得: ";
   $("#dlg-body").innerHTML = nice +
-    '<div class="two"><div><div class="small mute" style="margin-bottom:4px">整形後（OpenAlex互換のJSON）</div><pre>'+esc(JSON.stringify(w,null,1))+'</pre></div>'+
-    '<div><div class="small mute" style="margin-bottom:4px">原データ（保存した生データ）</div>'+(rawTxt?'<pre>'+esc(rawTxt)+'</pre>':'<div class="note">原データを表示できません: '+esc(rawErr)+'</div>')+'</div></div>'+
-    '<div class="small mute" style="margin-top:8px">APIで取得: <code>/api/works/'+esc(encodeURIComponent(id))+'</code></div>';
+    `<div class="two"><div><div class="small mute" style="margin-bottom:4px">${fmtLabel}</div><pre>${esc(JSON.stringify(w,null,1))}</pre></div>`+
+    `<div><div class="small mute" style="margin-bottom:4px">${rawLabel}</div>`+(rawTxt?`<pre>${esc(rawTxt)}</pre>`:`<div class="note">${rawErrMsg}${esc(rawErr)}</div>`)+'</div></div>'+
+    `<div class="small mute" style="margin-top:8px">${apiNote}<code>/api/works/${esc(encodeURIComponent(id))}</code></div>`;
 }
 $("#dlg-close").onclick = () => $("#dlg").close();
 $("#dlg").addEventListener("click", e => { if(e.target===$("#dlg")) $("#dlg").close(); });
 
-// ---------- ダウンロード ----------
-function condText(){ const p=formParams(); return p.toString()?decodeURIComponent(p.toString().replace(/&/g," / ")):"（なし：すべて）"; }
+// ── ダウンロード ─────────────────────────────────────────────────────────
+function condText(){ const p=formParams(); return p.toString()?decodeURIComponent(p.toString().replace(/&/g," / ")):t('dl-no-cond'); }
 function renderDlInfo(){
   const p = formParams(); p.set("limit","100");
   const o = location.origin, base = o+"/api/works?"+p.toString();
-  $("#dl-cond").textContent = condText();
+  const condEl = $('#dl-cond'); condEl.textContent = condText(); condEl.dataset.custom = p.toString() ? '1' : '';
   $("#api-url").textContent = base;
-  $("#api-curl").textContent = `curl "${base}"\n\n# 次のページ: レスポンスの next_cursor を cursor= に指定\ncurl "${base}&cursor=<next_cursor>"`;
+  $("#api-curl").textContent = `curl "${base}"\n\n# ${LANG==='en'?'Next page: set next_cursor from response to cursor=':'次のページ: レスポンスの next_cursor を cursor= に指定'}\ncurl "${base}&cursor=<next_cursor>"`;
   $("#oai-id").href = "/oai?verb=Identify"; $("#oai-sets").href = "/oai?verb=ListSets";
   const set = $("#f-search").site.value ? "&set=site:"+encodeURIComponent($("#f-search").site.value.split("/").pop().replace(/[^A-Za-z0-9\-_.!~*'()]/g,"_")) : (($("#f-search").institution.value)?"&set=inst:"+$("#f-search").institution.value:"");
   $("#oai-recs").href = "/oai?verb=ListRecords&metadataPrefix=jhub_work"+set;
@@ -325,8 +490,10 @@ function renderDlInfo(){
 let cancelDl = false;
 function abstractHtml(w){
   if(w.abstracts&&w.abstracts.length) return w.abstracts.map(a=>'<div style="margin-bottom:6px">'+(a.lang?'<span class="mute">['+esc(a.lang)+']</span> ':'')+esc(a.text)+'</div>').join("");
-  const m={withheld_by_policy:"原データにあり（提供方針により本文は出力していません）",not_permitted:"原データにあり（第三者利用の可否が確認できないため出力していません）",none:"なし"};
-  return esc(m[w.abstract_status]||(w.has_abstract_in_source?"あり（本文は出力していません）":"なし"));
+  const m = LANG==='en'
+    ? {withheld_by_policy:"In source data (withheld by output policy)",not_permitted:"In source data (third-party use not confirmed)",none:"None"}
+    : {withheld_by_policy:"原データにあり（提供方針により本文は出力していません）",not_permitted:"原データにあり（第三者利用の可否が確認できないため出力していません）",none:"なし"};
+  return esc(m[w.abstract_status]||(w.has_abstract_in_source?(LANG==='en'?"In source (not output)":"あり（本文は出力していません）"):(LANG==='en'?"None":"なし")));
 }
 function flat(w, x){ const f = (a)=>Array.isArray(a)?a.join("; "):(a??""); return {identifier:x.identifier, source:x.source, doi:w.doi, title:w.title, authors:(w.authorships||[]).map(a=>a.raw_author_name).join("; "), year:w.publication_year, date:w.publication_date, type:w.type, language:w.language, journal:w.journal_title, issn:f(w.issn), volume:w.biblio&&w.biblio.volume, issue:w.biblio&&w.biblio.issue, first_page:w.biblio&&w.biblio.first_page, last_page:w.biblio&&w.biblio.last_page, publisher:w.publisher, site_id:x.site_id, institution_code:x.institution_code, open_access:w.open_access&&w.open_access.is_oa, has_abstract:w.has_abstract_in_source, abstract_status:w.abstract_status, abstract:(w.abstracts||[]).map(a=>a.text).join(" / "), references_count:w.references_count, updated:x.updated}; }
 function csvCell(v){ v = v==null?"":String(v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
@@ -342,51 +509,60 @@ $("#dl-go").onclick = async () => {
       const r = await api("/api/works?"+q); total = r.total;
       items.push(...r.results);
       $("#dl-bar").style.width = Math.min(100, items.length/Math.min(max,total||1)*100)+"%";
-      $("#dl-msg").textContent = `${num(Math.min(items.length,max))} / ${num(Math.min(max,total))}件を取得中…`;
+      $("#dl-msg").textContent = `${num(Math.min(items.length,max))} / ${num(Math.min(max,total))}${LANG==='en'?' records fetched…':'件を取得中…'}`;
       if(!r.next_cursor) break; cursor = r.next_cursor;
     }
     const use = items.slice(0,max); let body, mime, ext;
     if(fmt==="jsonl"){ body = use.map(x=>JSON.stringify(x)).join("\n")+"\n"; mime="application/x-ndjson"; ext="jsonl"; }
     else if(fmt==="json"){ body = JSON.stringify(use,null,1); mime="application/json"; ext="json"; }
-    else { const rows = use.map(x=>flat(x.work||{},x)); const cols = rows.length?Object.keys(rows[0]):[]; body = "﻿"+[cols.join(",")].concat(rows.map(r=>cols.map(c=>csvCell(r[c])).join(","))).join("\n"); mime="text/csv"; ext="csv"; }
+    else { const rows = use.map(x=>flat(x.work||{},x)); const cols = rows.length?Object.keys(rows[0]):[]; body = "﻿"+[cols.join(",")].concat(rows.map(r2=>cols.map(c=>csvCell(r2[c])).join(","))).join("\n"); mime="text/csv"; ext="csv"; }
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([body],{type:mime+";charset=utf-8"}));
     a.download = "jhub_works_"+new Date().toISOString().slice(0,10)+"."+ext; document.body.appendChild(a); a.click(); a.remove();
-    $("#dl-msg").textContent = (cancelDl?"中止しました。":"完了: ")+num(use.length)+"件を保存しました。";
-  }catch(e){ $("#dl-msg").textContent = "エラー: "+e.message; }
+    $("#dl-msg").textContent = (cancelDl?(LANG==='en'?"Cancelled.":"中止しました。"):(LANG==='en'?"Done: ":"完了: "))+num(use.length)+(LANG==='en'?" records saved.":" 件を保存しました。");
+  }catch(e){ $("#dl-msg").textContent = (LANG==='en'?"Error: ":"エラー: ")+e.message; }
   $("#dl-go").disabled = false; $("#dl-cancel").disabled = true;
 };
 
-// ---------- 収集状況 ----------
+// ── 収集状況 ─────────────────────────────────────────────────────────────
 async function loadStatus(){
   const [s, st] = await Promise.all([api("/api/status"), api("/api/stats")]);
-  const card = (t, inner) => `<div class="card"><h2>${t}</h2>${inner}</div>`;
+  const L = (ja, en) => LANG==='en' ? en : ja;
+  const card = (t2, inner) => `<div class="card"><h2>${t2}</h2>${inner}</div>`;
   const src = (name, label, extra) => {
     const r = s.raw && s.raw[name], n = st.by_source[name]||0, files = r?r.files:0;
     const pf = s.state && s.state[name] && s.state[name].prefixes ? Object.entries(s.state[name].prefixes) : [];
-    return card(label, `<div class="kpi"><div class="n">${num(n)}</div><div class="l">取り込み済みの件数</div></div>
-      <dl style="margin-top:10px"><dt>生データ</dt><dd>${r?num(files)+"ファイル":"不明"}</dd>
-      <dt>収集の実行</dt><dd class="small">${r&&r.runs.length?esc(r.runs.slice(-3).join(", ")):"まだありません"}</dd>
-      ${pf.length?`<dt>最終取得日</dt><dd class="small">${pf.slice(0,8).map(([k,v])=>esc(k)+": "+esc(v)).join("<br>")}${pf.length>8?"<br>…他"+(pf.length-8)+"件":""}</dd>`:""}</dl>${extra||""}`);
+    return card(label, `<div class="kpi"><div class="n">${num(n)}</div><div class="l">${L("取り込み済みの件数","Ingested records")}</div></div>
+      <dl style="margin-top:10px"><dt>${L("生データ","Raw data")}</dt><dd>${r?num(files)+L("ファイル"," files"):L("不明","unknown")}</dd>
+      <dt>${L("収集の実行","Harvest runs")}</dt><dd class="small">${r&&r.runs.length?esc(r.runs.slice(-3).join(", ")):L("まだありません","None yet")}</dd>
+      ${pf.length?`<dt>${L("最終取得日","Last fetched")}</dt><dd class="small">${pf.slice(0,8).map(([k,v])=>esc(k)+": "+esc(v)).join("<br>")}${pf.length>8?"<br>…"+L("他","and ")+(pf.length-8)+L("件","more"):""}</dd>`:""}</dl>${extra||""}`);
   };
-  const irdbNote = (st.by_source.irdb||0)===0 ? '<div class="note">IRDBの実データは、まだ取り込んでいません。レコード取得（ListRecords）が、NIIに登録したIPアドレスからのみ許可されているためです。NIIに手続きを確認中です。</div>' : "";
-  $("#st-cards").innerHTML = src("jalc","JaLC（J-STAGE等）","") + src("irdb","IRDB（機関リポジトリ）", irdbNote) +
-    card("保存先・取り込み", `<dl><dt>保存先</dt><dd>${esc(s.store||"未設定")}</dd><dt>取り込み済みページ</dt><dd>${num(s.ingested_pages)}</dd><dt>最終更新</dt><dd class="small">${esc(st.last_update||"")}</dd></dl>
-      <div class="small mute">収集は、ターミナルの <code>harvest-jalc</code> / <code>harvest-irdb</code>、取り込みは <code>ingest</code> で実行します。</div>`);
+  const irdbNote = (st.by_source.irdb||0)===0 ? `<div class="note">${L("IRDBの実データは、まだ取り込んでいません。レコード取得（ListRecords）が、NIIに登録したIPアドレスからのみ許可されているためです。NIIに手続きを確認中です。","No IRDB records ingested yet. ListRecords access is restricted to registered IP addresses. Procedure being confirmed with NII.")}</div>` : "";
+  $("#st-cards").innerHTML = src("jalc",L("JaLC（J-STAGE等）","JaLC (J-STAGE etc.)"),"")+src("irdb",L("IRDB（機関リポジトリ）","IRDB (Institutional Repositories)"),irdbNote)+
+    card(L("保存先・取り込み","Storage & Ingest"), `<dl><dt>${L("保存先","Store")}</dt><dd>${esc(s.store||L("未設定","not set"))}</dd><dt>${L("取り込み済みページ","Ingested pages")}</dt><dd>${num(s.ingested_pages)}</dd><dt>${L("最終更新","Last updated")}</dt><dd class="small">${esc(st.last_update||"")}</dd></dl>
+      <div class="small mute">${L("収集は、ターミナルの","Harvest:")}<code>harvest-jalc</code>${L(" / ","/")} <code>harvest-irdb</code>${L("、取り込みは","  Ingest:")} <code>ingest</code>${L(" で実行します。","")}</div>`);
   try{
     const x = await (await fetch("/oai?verb=ListSets")).text();
     const d = new DOMParser().parseFromString(x,"text/xml");
     const sets = [...d.getElementsByTagName("set")].map(e=>[e.getElementsByTagName("setSpec")[0].textContent, e.getElementsByTagName("setName")[0].textContent]);
-    $("#sets").innerHTML = sets.length ? sets.slice(0,200).map(([a,b])=>`<a href="/oai?verb=ListRecords&metadataPrefix=jhub_work&set=${encodeURIComponent(a)}" target="_blank" rel="noopener"><code>${esc(a)}</code></a> <span class="mute">${esc(b)}</span>`).join("<br>")+(sets.length>200?"<br>…他"+(sets.length-200)+"件":"") : "（なし）";
-  }catch(e){ $("#sets").textContent = "取得できませんでした"; }
+    $("#sets").innerHTML = sets.length ? sets.slice(0,200).map(([a2,b2])=>`<a href="/oai?verb=ListRecords&metadataPrefix=jhub_work&set=${encodeURIComponent(a2)}" target="_blank" rel="noopener"><code>${esc(a2)}</code></a> <span class="mute">${esc(b2)}</span>`).join("<br>")+(sets.length>200?"<br>…"+L("他","and ")+(sets.length-200)+L("件","more"):"") : L("（なし）","(none)");
+  }catch(e){ $("#sets").textContent = L("取得できませんでした","Could not retrieve"); }
 }
 
-// ---------- 起動 ----------
+// ── 起動 ─────────────────────────────────────────────────────────────────
 (async () => {
-  try{ const h = await api("/health"); $("#hdr-dot").className="dot ok"; $("#hdr-health").textContent="稼働中"; }
-  catch(e){ $("#hdr-dot").className="dot bad"; $("#hdr-health").textContent="接続できません"; }
+  try{
+    const h = await api("/health");
+    const dot = $("#hdr-dot"); const hth = $("#hdr-health");
+    dot.className="dot ok"; hth.dataset.state='ok'; hth.textContent=t('health-ok');
+  }catch(e){
+    const dot = $("#hdr-dot"); const hth = $("#hdr-health");
+    dot.className="dot bad"; hth.dataset.state='err'; hth.textContent=t('health-err');
+  }
   loadFilters();
-  try{ await loadDash(); }catch(e){ $("#kpis").innerHTML='<div class="card">データを読み込めません: '+esc(e.message)+'</div>'; }
-  const t = (location.hash||"").slice(1); if(["dash","search","jnl","dl","status"].includes(t)) showTab(t);
+  try{ await loadDash(); }catch(e){ $("#kpis").innerHTML='<div class="card">'+esc(e.message)+'</div>'; }
+  const tab = (location.hash||"").slice(1); if(["dash","search","jnl","dl","status"].includes(tab)) showTab(tab);
+  // Apply initial language (ja)
+  applyLang('ja');
 })();
 </script>
 </body>
