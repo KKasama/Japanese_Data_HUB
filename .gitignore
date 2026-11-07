@@ -1,10 +1,12 @@
 __pycache__/
 *.pyc
 config.json
-/data/
+config.local.json
 export/
-*.sqlite
 export*/
+# data/ は追跡する（hub.sqlite と institutions を含める）
+# 大きな生データ(store/)だけ除外
+/data/store/
 ror_unmatched.csv
 ror_matched.csv
 ror_none_list.csv
